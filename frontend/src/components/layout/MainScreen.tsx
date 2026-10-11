@@ -1,9 +1,9 @@
 import { motion } from 'motion/react';
-import type { SageMode } from '../../types';
+import type { SageMode, SageExpression } from '../../types';
 import { MODE_BUTTONS } from '../../types';
 import { Character } from '../character';
 import { Header, InputField, ModeButton } from '../ui';
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 
 interface MainScreenProps {
   currentMode: SageMode;
@@ -20,6 +20,33 @@ export const MainScreen = ({
 }: MainScreenProps) => {
   const [inputValue, setInputValue] = useState('');
   const [showWelcome, setShowWelcome] = useState(true);
+  const [expressionOverride, setExpressionOverride] = useState<SageExpression | null>(null);
+  const overrideTimerRef = useRef<number | null>(null);
+
+  const flashExpression = useCallback((expr: SageExpression, durationMs: number) => {
+    if (overrideTimerRef.current) {
+      window.clearTimeout(overrideTimerRef.current);
+      overrideTimerRef.current = null;
+    }
+    setExpressionOverride(expr);
+    overrideTimerRef.current = window.setTimeout(() => {
+      setExpressionOverride(null);
+      overrideTimerRef.current = null;
+    }, durationMs);
+  }, []);
+
+  useEffect(() => () => {
+    if (overrideTimerRef.current) window.clearTimeout(overrideTimerRef.current);
+  }, []);
+
+  const handleInputChange = useCallback((value: string) => {
+    // Stay excited for as long as the user is typing. Each keystroke resets the
+    // timer, so Sage only settles back ~1.3s after the last keystroke.
+    if (value.trim()) {
+      flashExpression('excited', 1300);
+    }
+    setInputValue(value);
+  }, [flashExpression]);
 
   const handleSubmit = useCallback((value: string) => {
     if (value.trim()) {
@@ -97,7 +124,7 @@ export const MainScreen = ({
           minWidth: '180px',
           zIndex: 10,
         }}>
-          <Character mode={currentMode} size={1} />
+          <Character mode={currentMode} expression={expressionOverride ?? undefined} size={1} />
         </div>
 
         <div style={{
@@ -147,7 +174,7 @@ export const MainScreen = ({
           >
             <InputField
               value={inputValue}
-              onChange={setInputValue}
+              onChange={handleInputChange}
               onSubmit={handleSubmit}
               placeholder="Tell me what&apos;s on your mind..."
               autoFocus={!showWelcome}

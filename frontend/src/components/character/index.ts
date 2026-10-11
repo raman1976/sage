@@ -1,3 +1,3 @@
-export { Character } from './Character';
+export { Character, expressionForMode } from './Character';
 export * from './CharacterParts';
 export * from './FaceParts';

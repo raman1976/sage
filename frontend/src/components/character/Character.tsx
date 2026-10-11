@@ -1,34 +1,47 @@
 import { motion, useMotionValue, useTransform, type MotionValue } from 'motion/react';
-import { useEffect, useRef } from 'react';
-import type { SageMode } from '../../types';
+import { useEffect, useRef, useState } from 'react';
+import type { SageMode, SageExpression } from '../../types';
 
 interface CharacterProps {
   mode: SageMode;
+  expression?: SageExpression;
   className?: string;
   size?: number;
 }
 
-interface ModeExpression {
-  eyeScale: number;
+interface ExpressionConfig {
+  eyeOpen: number;
+  highlight: 'round' | 'star' | 'none';
+  mouth: 'smile' | 'open' | 'calm' | 'o';
+  cheek: number;
+  eyeScaleY: number;
   eyeOffsetY: number;
-  eyebrowRotation: number;
-  eyebrowHeight: number;
-  mouthType: 'smile' | 'open' | 'thinking' | 'calm' | 'neutral';
-  cheekOpacity: number;
-  headTilt: number;
-  bodySway: number;
-  blinkSpeed: number;
+  browLift: number;
+  browRot: number;
+  tilt: number;
+  sway: number;
+  blinkRate: number;
 }
 
-const MODE_EXPRESSIONS: Record<SageMode, ModeExpression> = {
-  idle: { eyeScale: 1, eyeOffsetY: 0, eyebrowRotation: -6, eyebrowHeight: 0, mouthType: 'smile', cheekOpacity: 0.65, headTilt: 0, bodySway: 1, blinkSpeed: 1 },
-  start: { eyeScale: 1.08, eyeOffsetY: -2, eyebrowRotation: -14, eyebrowHeight: -4, mouthType: 'open', cheekOpacity: 0.85, headTilt: 0, bodySway: 1.5, blinkSpeed: 0.8 },
-  focus: { eyeScale: 0.95, eyeOffsetY: 0, eyebrowRotation: -2, eyebrowHeight: 2, mouthType: 'neutral', cheekOpacity: 0.45, headTilt: 0, bodySway: 0.3, blinkSpeed: 1.2 },
-  calm: { eyeScale: 0.12, eyeOffsetY: 3, eyebrowRotation: -4, eyebrowHeight: 1, mouthType: 'calm', cheekOpacity: 0.55, headTilt: 0, bodySway: 0.5, blinkSpeed: 0.5 },
-  plan: { eyeScale: 0.9, eyeOffsetY: -3, eyebrowRotation: 6, eyebrowHeight: -3, mouthType: 'thinking', cheekOpacity: 0.45, headTilt: 4, bodySway: 0.8, blinkSpeed: 1 },
-  listening: { eyeScale: 1.1, eyeOffsetY: -1, eyebrowRotation: -11, eyebrowHeight: -3, mouthType: 'neutral', cheekOpacity: 0.55, headTilt: -3, bodySway: 0.6, blinkSpeed: 0.9 },
-  thinking: { eyeScale: 0.88, eyeOffsetY: -5, eyebrowRotation: 7, eyebrowHeight: -4, mouthType: 'thinking', cheekOpacity: 0.35, headTilt: 3, bodySway: 0.7, blinkSpeed: 1.5 },
+const EXPRESSIONS: Record<SageExpression, ExpressionConfig> = {
+  happy:   { eyeOpen: 1, highlight: 'round', mouth: 'smile', cheek: 0.7,  eyeScaleY: 1,    eyeOffsetY: 0,  browLift: 0,  browRot: -6,  tilt: 0,  sway: 1,   blinkRate: 1 },
+  blink:   { eyeOpen: 0, highlight: 'round', mouth: 'smile', cheek: 0.65, eyeScaleY: 1,    eyeOffsetY: 0,  browLift: 0,  browRot: -4,  tilt: 0,  sway: 1,   blinkRate: 1 },
+  excited: { eyeOpen: 1, highlight: 'star',  mouth: 'open',  cheek: 0.95, eyeScaleY: 1.12, eyeOffsetY: -1, browLift: -3, browRot: -12, tilt: 0,  sway: 1.4, blinkRate: 0.8 },
+  calm:    { eyeOpen: 0, highlight: 'none',  mouth: 'calm',  cheek: 0.55, eyeScaleY: 1,    eyeOffsetY: 0,  browLift: 1,  browRot: -3,  tilt: 0,  sway: 0.5, blinkRate: 0.5 },
+  curious: { eyeOpen: 1, highlight: 'round', mouth: 'o',     cheek: 0.5,  eyeScaleY: 1.05, eyeOffsetY: -4, browLift: -5, browRot: -8,  tilt: -5, sway: 0.7, blinkRate: 1 },
 };
+
+const MODE_EXPRESSION: Record<SageMode, SageExpression> = {
+  idle: 'happy',
+  listening: 'curious',
+  thinking: 'curious',
+  focus: 'calm',
+  calm: 'calm',
+  start: 'happy',
+  plan: 'happy',
+};
+
+export const expressionForMode = (mode: SageMode): SageExpression => MODE_EXPRESSION[mode] ?? 'happy';
 
 const BASE_W = 300;
 const BASE_H = 380;
@@ -44,37 +57,67 @@ const EYE_TOP = 40;
 const EYE_LEFT_L = 27;
 const EYE_LEFT_R = 103;
 
-export const Character = ({ mode, className = '', size = 1 }: CharacterProps) => {
-  const expression = MODE_EXPRESSIONS[mode];
-  const exprRef = useRef(expression);
-  exprRef.current = expression;
+export const Character = ({ mode, expression, className = '', size = 1 }: CharacterProps) => {
+  const resolved: SageExpression = expression ?? expressionForMode(mode);
+
+  const [tempExpression, setTempExpression] = useState<SageExpression | null>(null);
+  const tempTimerRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (tempTimerRef.current) {
+      window.clearTimeout(tempTimerRef.current);
+      tempTimerRef.current = null;
+    }
+    if (mode === 'start') {
+      setTempExpression('excited');
+      tempTimerRef.current = window.setTimeout(() => setTempExpression(null), 1300);
+    } else {
+      setTempExpression(null);
+    }
+    return () => {
+      if (tempTimerRef.current) {
+        window.clearTimeout(tempTimerRef.current);
+        tempTimerRef.current = null;
+      }
+    };
+  }, [mode]);
+
+  const activeExpression: SageExpression = tempExpression ?? resolved;
+  const expressionConfig = EXPRESSIONS[activeExpression];
+  const exprRef = useRef(expressionConfig);
+  exprRef.current = expressionConfig;
 
   const breath = useMotionValue(0);
-  const blink = useMotionValue(1);
+  const eyeOpenMV = useMotionValue(expressionConfig.eyeOpen);
 
   const eyeWidthMV = useMotionValue(EYE_W);
-  const eyeHeightMV = useMotionValue(EYE_H * expression.eyeScale);
-  const eyeTopMV = useMotionValue(EYE_TOP + expression.eyeOffsetY);
+  const eyeHeightMV = useMotionValue(EYE_H * expressionConfig.eyeScaleY);
+  const eyeTopMV = useMotionValue(EYE_TOP + expressionConfig.eyeOffsetY);
   const eyeXMV = useMotionValue(0);
-  const highlightOpacityMV = useMotionValue(1);
-  const browRotateMV = useMotionValue(expression.eyebrowRotation);
-  const browYMV = useMotionValue(expression.eyebrowHeight);
-  const cheekOpacityMV = useMotionValue(expression.cheekOpacity);
-  const headTiltMV = useMotionValue(expression.headTilt);
+  const highlightOpacityMV = useMotionValue(expressionConfig.highlight !== 'none' ? 1 : 0);
+  const browRotateMV = useMotionValue(expressionConfig.browRot);
+  const browYMV = useMotionValue(expressionConfig.browLift);
+  const cheekOpacityMV = useMotionValue(expressionConfig.cheek);
+  const headTiltMV = useMotionValue(expressionConfig.tilt);
   const sproutRotateMV = useMotionValue(0);
   const earLeftRotateMV = useMotionValue(17);
   const earRightRotateMV = useMotionValue(-17);
   const bodyRotateMV = useMotionValue(0);
 
-  const blinkTimeoutRef = useRef<number | null>(null);
   const smoothRef = useRef({
-    eyeScale: expression.eyeScale,
-    eyeOffsetY: expression.eyeOffsetY,
-    browRot: expression.eyebrowRotation,
-    browY: expression.eyebrowHeight,
-    cheek: expression.cheekOpacity,
-    tilt: expression.headTilt,
+    eyeOpen: expressionConfig.eyeOpen,
+    eyeScaleY: expressionConfig.eyeScaleY,
+    eyeOffsetY: expressionConfig.eyeOffsetY,
+    browRot: expressionConfig.browRot,
+    browY: expressionConfig.browLift,
+    cheek: expressionConfig.cheek,
+    tilt: expressionConfig.tilt,
+    sway: expressionConfig.sway,
+    blinkRate: expressionConfig.blinkRate,
+    highlightOn: expressionConfig.highlight !== 'none' ? 1 : 0,
   });
+
+  const blinkRef = useRef({ next: 0, closing: false, start: 0 });
 
   const reducedMotion =
     typeof window !== 'undefined' &&
@@ -82,12 +125,15 @@ export const Character = ({ mode, className = '', size = 1 }: CharacterProps) =>
 
   useEffect(() => {
     if (reducedMotion) {
-      eyeHeightMV.set(EYE_H * expression.eyeScale);
-      eyeTopMV.set(EYE_TOP + expression.eyeOffsetY);
-      cheekOpacityMV.set(expression.cheekOpacity);
-      browRotateMV.set(expression.eyebrowRotation);
-      browYMV.set(expression.eyebrowHeight);
-      headTiltMV.set(expression.headTilt);
+      const c = exprRef.current;
+      eyeOpenMV.set(c.eyeOpen);
+      eyeHeightMV.set(EYE_H * c.eyeScaleY);
+      eyeTopMV.set(EYE_TOP + c.eyeOffsetY);
+      cheekOpacityMV.set(c.cheek);
+      browRotateMV.set(c.browRot);
+      browYMV.set(c.browLift);
+      headTiltMV.set(c.tilt);
+      highlightOpacityMV.set(c.highlight !== 'none' ? 1 : 0);
       return;
     }
 
@@ -99,35 +145,52 @@ export const Character = ({ mode, className = '', size = 1 }: CharacterProps) =>
       const e = exprRef.current;
       const s = smoothRef.current;
 
-      s.eyeScale += (e.eyeScale - s.eyeScale) * k;
+      s.eyeOpen += (e.eyeOpen - s.eyeOpen) * k;
+      s.eyeScaleY += (e.eyeScaleY - s.eyeScaleY) * k;
       s.eyeOffsetY += (e.eyeOffsetY - s.eyeOffsetY) * k;
-      s.browRot += (e.eyebrowRotation - s.browRot) * k;
-      s.browY += (e.eyebrowHeight - s.browY) * k;
-      s.cheek += (e.cheekOpacity - s.cheek) * k;
-      s.tilt += (e.headTilt - s.tilt) * k;
+      s.browRot += (e.browRot - s.browRot) * k;
+      s.browY += (e.browLift - s.browY) * k;
+      s.cheek += (e.cheek - s.cheek) * k;
+      s.tilt += (e.tilt - s.tilt) * k;
+      s.sway += (e.sway - s.sway) * k;
+      s.blinkRate += (e.blinkRate - s.blinkRate) * k;
+      s.highlightOn += ((e.highlight !== 'none' ? 1 : 0) - s.highlightOn) * k;
 
       breath.set(Math.sin(t * 0.9));
       sproutRotateMV.set(Math.sin(t * 0.7) * 3);
-      bodyRotateMV.set(Math.sin(t * 0.5) * 0.6 * e.bodySway);
+      bodyRotateMV.set(Math.sin(t * 0.5) * 0.6 * s.sway);
       earLeftRotateMV.set(17 + Math.sin(t * 2.2) * 1.6);
       earRightRotateMV.set(-17 + Math.sin(t * 2.2 + 1.3) * 1.6);
 
-      if (Math.random() < 0.003 * e.blinkSpeed) {
-        blink.set(0.05);
-        if (blinkTimeoutRef.current) window.clearTimeout(blinkTimeoutRef.current);
-        blinkTimeoutRef.current = window.setTimeout(() => blink.set(1), 140);
+      // Natural blink overlay: only when the eyes are open, every 3-6s.
+      const b = blinkRef.current;
+      if (!b.closing && s.eyeOpen > 0.5 && time >= b.next) {
+        b.closing = true;
+        b.start = time;
       }
+      let blinkFactor = 1;
+      if (b.closing) {
+        const phase = (time - b.start) / 150;
+        if (phase >= 1) {
+          b.closing = false;
+          const interval = 3000 + Math.random() * 3000;
+          b.next = time + interval;
+        } else {
+          blinkFactor = phase < 0.5 ? 1 - phase * 2 : (phase - 0.5) * 2;
+        }
+      }
+      if (b.next === 0) b.next = time + 2000 + Math.random() * 2000;
 
-      const b = blink.get();
-      eyeHeightMV.set(EYE_H * s.eyeScale * b);
-      eyeWidthMV.set(EYE_W * (0.88 + 0.12 * b));
-      eyeTopMV.set(EYE_TOP + (1 - b) * 13 + s.eyeOffsetY);
+      eyeOpenMV.set(s.eyeOpen * blinkFactor);
+      eyeHeightMV.set(EYE_H * s.eyeScaleY * blinkFactor);
+      eyeWidthMV.set(EYE_W * (0.9 + 0.1 * blinkFactor));
+      eyeTopMV.set(EYE_TOP + (1 - blinkFactor) * 10 + s.eyeOffsetY);
       eyeXMV.set(s.tilt * 0.25);
-      highlightOpacityMV.set(Math.min(1, b * 2));
+      highlightOpacityMV.set(s.highlightOn * blinkFactor);
       browRotateMV.set(s.browRot);
       browYMV.set(s.browY);
       cheekOpacityMV.set(s.cheek);
-      headTiltMV.set(s.tilt + Math.sin(t * 0.35) * 1.3 * e.bodySway);
+      headTiltMV.set(s.tilt + Math.sin(t * 0.35) * 1.3 * s.sway);
 
       raf = requestAnimationFrame(animate);
     };
@@ -135,7 +198,6 @@ export const Character = ({ mode, className = '', size = 1 }: CharacterProps) =>
     raf = requestAnimationFrame(animate);
     return () => {
       cancelAnimationFrame(raf);
-      if (blinkTimeoutRef.current) window.clearTimeout(blinkTimeoutRef.current);
     };
   }, [reducedMotion]);
 
@@ -189,7 +251,9 @@ export const Character = ({ mode, className = '', size = 1 }: CharacterProps) =>
             <CatEar side="right" />
             <Hood />
             <Face
-              mouthType={expression.mouthType}
+              mouth={expressionConfig.mouth}
+              highlight={expressionConfig.highlight}
+              eyeOpenMV={eyeOpenMV}
               eyeLeftL={EYE_LEFT_L}
               eyeLeftR={EYE_LEFT_R}
               eyeTopMV={eyeTopMV}
@@ -317,7 +381,9 @@ const Hood = () => (
 );
 
 interface FaceProps {
-  mouthType: ModeExpression['mouthType'];
+  mouth: ExpressionConfig['mouth'];
+  highlight: ExpressionConfig['highlight'];
+  eyeOpenMV: MotionValue<number>;
   eyeLeftL: number;
   eyeLeftR: number;
   eyeTopMV: MotionValue<number>;
@@ -331,7 +397,9 @@ interface FaceProps {
 }
 
 const Face = ({
-  mouthType,
+  mouth,
+  highlight,
+  eyeOpenMV,
   eyeLeftL,
   eyeLeftR,
   eyeTopMV,
@@ -365,6 +433,8 @@ const Face = ({
       widthMV={eyeWidthMV}
       heightMV={eyeHeightMV}
       xMV={eyeXMV}
+      eyeOpenMV={eyeOpenMV}
+      highlight={highlight}
       highlightOpacityMV={highlightOpacityMV}
       browRotateMV={browRotateMV}
       browYMV={browYMV}
@@ -376,13 +446,15 @@ const Face = ({
       widthMV={eyeWidthMV}
       heightMV={eyeHeightMV}
       xMV={eyeXMV}
+      eyeOpenMV={eyeOpenMV}
+      highlight={highlight}
       highlightOpacityMV={highlightOpacityMV}
       browRotateMV={browRotateMV}
       browYMV={browYMV}
     />
     <Cheek side="left" opacityMV={cheekOpacityMV} />
     <Cheek side="right" opacityMV={cheekOpacityMV} />
-    <Mouth type={mouthType} />
+    <Mouth type={mouth} />
   </div>
 );
 
@@ -393,6 +465,8 @@ interface EyeProps {
   widthMV: MotionValue<number>;
   heightMV: MotionValue<number>;
   xMV: MotionValue<number>;
+  eyeOpenMV: MotionValue<number>;
+  highlight: ExpressionConfig['highlight'];
   highlightOpacityMV: MotionValue<number>;
   browRotateMV: MotionValue<number>;
   browYMV: MotionValue<number>;
@@ -405,13 +479,21 @@ const Eye = ({
   widthMV,
   heightMV,
   xMV,
+  eyeOpenMV,
+  highlight,
   highlightOpacityMV,
   browRotateMV,
   browYMV,
 }: EyeProps) => {
   const mirrored = side === 'right';
+  const closedOpacity = useTransform(eyeOpenMV, (o) => 1 - o);
+  const centerX = left + EYE_W / 2;
+  const closedTop = useTransform(topMV, (t) => t + EYE_H * 0.42);
+  const closedW = EYE_W * 0.92;
+
   return (
     <>
+      {/* Open eye (brown glossy oval with highlights) */}
       <motion.div
         style={{
           position: 'absolute',
@@ -420,6 +502,7 @@ const Eye = ({
           width: widthMV,
           height: heightMV,
           x: xMV,
+          opacity: eyeOpenMV,
           background:
             'radial-gradient(circle at 34% 28%, var(--sage-eye-hi) 0%, var(--sage-eye) 52%, var(--sage-eye-deep) 100%)',
           borderRadius: '50%',
@@ -428,32 +511,89 @@ const Eye = ({
           zIndex: 5,
         }}
       >
-        <motion.div
-          style={{
-            position: 'absolute',
-            top: 7,
-            left: mirrored ? 31 : 8,
-            width: 15,
-            height: 15,
-            background: '#FFFFFF',
-            borderRadius: '50%',
-            filter: 'blur(0.5px)',
-            opacity: highlightOpacityMV,
-          }}
-        />
-        <motion.div
-          style={{
-            position: 'absolute',
-            top: 36,
-            left: mirrored ? 10 : 37,
-            width: 7,
-            height: 7,
-            background: 'rgba(255,255,255,0.8)',
-            borderRadius: '50%',
-            opacity: highlightOpacityMV,
-          }}
-        />
+        {highlight === 'star' ? (
+          <>
+            <motion.div
+              style={{
+                position: 'absolute',
+                top: 4,
+                left: mirrored ? 26 : 3,
+                width: 22,
+                height: 22,
+                background: '#FFFFFF',
+                clipPath:
+                  'polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%)',
+                opacity: highlightOpacityMV,
+              }}
+            />
+            <motion.div
+              style={{
+                position: 'absolute',
+                top: 30,
+                left: mirrored ? 12 : 34,
+                width: 11,
+                height: 11,
+                background: '#FFFFFF',
+                clipPath:
+                  'polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%)',
+                opacity: highlightOpacityMV,
+              }}
+            />
+          </>
+        ) : (
+          <>
+            <motion.div
+              style={{
+                position: 'absolute',
+                top: 7,
+                left: mirrored ? 31 : 8,
+                width: 15,
+                height: 15,
+                background: '#FFFFFF',
+                borderRadius: '50%',
+                filter: 'blur(0.5px)',
+                opacity: highlightOpacityMV,
+              }}
+            />
+            <motion.div
+              style={{
+                position: 'absolute',
+                top: 36,
+                left: mirrored ? 10 : 37,
+                width: 7,
+                height: 7,
+                background: 'rgba(255,255,255,0.8)',
+                borderRadius: '50%',
+                opacity: highlightOpacityMV,
+              }}
+            />
+          </>
+        )}
       </motion.div>
+
+      {/* Closed eye (∩ arc), fades in as the open eye fades out */}
+      <motion.svg
+        width={closedW}
+        height={EYE_H * 0.5}
+        viewBox={`0 0 ${closedW} ${EYE_H * 0.5}`}
+        style={{
+          position: 'absolute',
+          left: centerX - closedW / 2,
+          top: closedTop,
+          x: xMV,
+          opacity: closedOpacity,
+          overflow: 'visible',
+          zIndex: 5,
+        }}
+      >
+        <path
+          d={`M ${closedW * 0.08} ${EYE_H * 0.34} Q ${closedW / 2} ${EYE_H * 0.02} ${closedW * 0.92} ${EYE_H * 0.34}`}
+          fill="none"
+          stroke="var(--sage-eye)"
+          strokeWidth={4}
+          strokeLinecap="round"
+        />
+      </motion.svg>
 
       <motion.div
         style={{
@@ -499,7 +639,7 @@ const Cheek = ({
   />
 );
 
-const Mouth = ({ type }: { type: ModeExpression['mouthType'] }) => {
+const Mouth = ({ type }: { type: ExpressionConfig['mouth'] }) => {
   const base: React.CSSProperties = {
     position: 'absolute',
     top: 122,
@@ -538,17 +678,18 @@ const Mouth = ({ type }: { type: ModeExpression['mouthType'] }) => {
     );
   }
 
-  if (type === 'neutral') {
+  if (type === 'o') {
     return (
       <div
         style={{
           ...base,
-          top: 126,
-          width: 26,
-          height: 12,
-          background: 'transparent',
-          borderBottom: '2.5px solid var(--sage-eye)',
-          borderRadius: '0 0 50% 50% / 0 0 100% 100%',
+          top: 124,
+          width: 16,
+          height: 16,
+          background:
+            'radial-gradient(circle at 40% 35%, #7A5A46 0%, var(--sage-eye) 100%)',
+          borderRadius: '50%',
+          boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.2)',
         }}
       />
     );
@@ -565,23 +706,6 @@ const Mouth = ({ type }: { type: ModeExpression['mouthType'] }) => {
           background: 'transparent',
           borderBottom: '2px solid rgba(75,58,46,0.8)',
           borderRadius: '0 0 50% 50% / 0 0 100% 100%',
-        }}
-      />
-    );
-  }
-
-  if (type === 'thinking') {
-    return (
-      <div
-        style={{
-          ...base,
-          top: 126,
-          width: 20,
-          height: 10,
-          background: 'transparent',
-          borderBottom: '2px solid rgba(75,58,46,0.85)',
-          borderRadius: '0 0 40% 40%',
-          rotate: '-8deg',
         }}
       />
     );

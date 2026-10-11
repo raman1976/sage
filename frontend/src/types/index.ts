@@ -1,5 +1,7 @@
 export type SageMode = 'idle' | 'start' | 'focus' | 'calm' | 'plan' | 'listening' | 'thinking';
 
+export type SageExpression = 'happy' | 'blink' | 'excited' | 'calm' | 'curious';
+
 export interface AgentState {
   mode: SageMode;
 }
