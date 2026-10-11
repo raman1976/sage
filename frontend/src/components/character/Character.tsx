@@ -1,4 +1,4 @@
-import { motion, useMotionValue, useTransform } from 'motion/react';
+import { motion, useMotionValue, useTransform, type MotionValue } from 'motion/react';
 import { useEffect, useRef } from 'react';
 import type { SageMode } from '../../types';
 
@@ -8,7 +8,7 @@ interface CharacterProps {
   size?: number;
 }
 
-const MODE_EXPRESSIONS: Record<SageMode, {
+interface ModeExpression {
   eyeScale: number;
   eyeOffsetY: number;
   eyebrowRotation: number;
@@ -18,810 +18,679 @@ const MODE_EXPRESSIONS: Record<SageMode, {
   headTilt: number;
   bodySway: number;
   blinkSpeed: number;
-}> = {
-  idle: { eyeScale: 1, eyeOffsetY: 0, eyebrowRotation: -8, eyebrowHeight: 0, mouthType: 'smile', cheekOpacity: 0.6, headTilt: 0, bodySway: 1, blinkSpeed: 1 },
-  start: { eyeScale: 1.1, eyeOffsetY: -2, eyebrowRotation: -15, eyebrowHeight: -5, mouthType: 'open', cheekOpacity: 0.8, headTilt: 0, bodySway: 1.5, blinkSpeed: 0.8 },
-  focus: { eyeScale: 0.95, eyeOffsetY: 0, eyebrowRotation: -2, eyebrowHeight: 2, mouthType: 'neutral', cheekOpacity: 0.4, headTilt: 0, bodySway: 0.3, blinkSpeed: 1.2 },
-  calm: { eyeScale: 0.5, eyeOffsetY: 2, eyebrowRotation: -5, eyebrowHeight: 0, mouthType: 'calm', cheekOpacity: 0.5, headTilt: 0, bodySway: 0.5, blinkSpeed: 0.5 },
-  plan: { eyeScale: 0.9, eyeOffsetY: -4, eyebrowRotation: 5, eyebrowHeight: -3, mouthType: 'thinking', cheekOpacity: 0.4, headTilt: 5, bodySway: 0.8, blinkSpeed: 1 },
-  listening: { eyeScale: 1.15, eyeOffsetY: -1, eyebrowRotation: -12, eyebrowHeight: -4, mouthType: 'neutral', cheekOpacity: 0.5, headTilt: -3, bodySway: 0.6, blinkSpeed: 0.9 },
-  thinking: { eyeScale: 0.9, eyeOffsetY: -6, eyebrowRotation: 8, eyebrowHeight: -5, mouthType: 'thinking', cheekOpacity: 0.3, headTilt: 3, bodySway: 0.7, blinkSpeed: 1.5 },
+}
+
+const MODE_EXPRESSIONS: Record<SageMode, ModeExpression> = {
+  idle: { eyeScale: 1, eyeOffsetY: 0, eyebrowRotation: -6, eyebrowHeight: 0, mouthType: 'smile', cheekOpacity: 0.65, headTilt: 0, bodySway: 1, blinkSpeed: 1 },
+  start: { eyeScale: 1.08, eyeOffsetY: -2, eyebrowRotation: -14, eyebrowHeight: -4, mouthType: 'open', cheekOpacity: 0.85, headTilt: 0, bodySway: 1.5, blinkSpeed: 0.8 },
+  focus: { eyeScale: 0.95, eyeOffsetY: 0, eyebrowRotation: -2, eyebrowHeight: 2, mouthType: 'neutral', cheekOpacity: 0.45, headTilt: 0, bodySway: 0.3, blinkSpeed: 1.2 },
+  calm: { eyeScale: 0.12, eyeOffsetY: 3, eyebrowRotation: -4, eyebrowHeight: 1, mouthType: 'calm', cheekOpacity: 0.55, headTilt: 0, bodySway: 0.5, blinkSpeed: 0.5 },
+  plan: { eyeScale: 0.9, eyeOffsetY: -3, eyebrowRotation: 6, eyebrowHeight: -3, mouthType: 'thinking', cheekOpacity: 0.45, headTilt: 4, bodySway: 0.8, blinkSpeed: 1 },
+  listening: { eyeScale: 1.1, eyeOffsetY: -1, eyebrowRotation: -11, eyebrowHeight: -3, mouthType: 'neutral', cheekOpacity: 0.55, headTilt: -3, bodySway: 0.6, blinkSpeed: 0.9 },
+  thinking: { eyeScale: 0.88, eyeOffsetY: -5, eyebrowRotation: 7, eyebrowHeight: -4, mouthType: 'thinking', cheekOpacity: 0.35, headTilt: 3, bodySway: 0.7, blinkSpeed: 1.5 },
 };
 
-const CHARACTER_WIDTH = 300;
-const CHARACTER_HEIGHT = 380;
-const BODY_HEIGHT = 180;
-const FACE_WIDTH = 220;
-const FACE_HEIGHT = 220;
-const FACE_TOP = 10;
+const BASE_W = 300;
+const BASE_H = 380;
+
+const HOOD = { left: 42, top: 78, size: 216 };
+const FACE = { left: 58, top: 94, size: 184 };
+const BODY = { left: 24, top: 264, width: 252, height: 116 };
+const NECK = { x: HOOD.left + HOOD.size / 2, y: HOOD.top + HOOD.size - 2 };
+
+const EYE_W = 54;
+const EYE_H = 58;
+const EYE_TOP = 40;
+const EYE_LEFT_L = 27;
+const EYE_LEFT_R = 103;
 
 export const Character = ({ mode, className = '', size = 1 }: CharacterProps) => {
-  const timeRef = useRef(0);
-  const animationFrameRef = useRef<number | null>(null);
+  const expression = MODE_EXPRESSIONS[mode];
+  const exprRef = useRef(expression);
+  exprRef.current = expression;
 
   const breath = useMotionValue(0);
   const blink = useMotionValue(1);
-  const headTilt = useMotionValue(0);
-  const sproutSway = useMotionValue(0);
-  const earTwitch = useMotionValue(0);
-  const bodySway = useMotionValue(0);
 
-  const expression = MODE_EXPRESSIONS[mode];
+  const eyeWidthMV = useMotionValue(EYE_W);
+  const eyeHeightMV = useMotionValue(EYE_H * expression.eyeScale);
+  const eyeTopMV = useMotionValue(EYE_TOP + expression.eyeOffsetY);
+  const eyeXMV = useMotionValue(0);
+  const highlightOpacityMV = useMotionValue(1);
+  const browRotateMV = useMotionValue(expression.eyebrowRotation);
+  const browYMV = useMotionValue(expression.eyebrowHeight);
+  const cheekOpacityMV = useMotionValue(expression.cheekOpacity);
+  const headTiltMV = useMotionValue(expression.headTilt);
+  const sproutRotateMV = useMotionValue(0);
+  const earLeftRotateMV = useMotionValue(17);
+  const earRightRotateMV = useMotionValue(-17);
+  const bodyRotateMV = useMotionValue(0);
 
-  const eyeOffsetY = useMotionValue(expression.eyeOffsetY);
-  const eyebrowRotation = useMotionValue(expression.eyebrowRotation);
-  const eyebrowHeight = useMotionValue(expression.eyebrowHeight);
-  const cheekOpacity = useMotionValue(expression.cheekOpacity);
-  const targetHeadTilt = useMotionValue(expression.headTilt);
+  const blinkTimeoutRef = useRef<number | null>(null);
+  const smoothRef = useRef({
+    eyeScale: expression.eyeScale,
+    eyeOffsetY: expression.eyeOffsetY,
+    browRot: expression.eyebrowRotation,
+    browY: expression.eyebrowHeight,
+    cheek: expression.cheekOpacity,
+    tilt: expression.headTilt,
+  });
 
-  const reducedMotion = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const reducedMotion =
+    typeof window !== 'undefined' &&
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   useEffect(() => {
-    if (reducedMotion) return;
+    if (reducedMotion) {
+      eyeHeightMV.set(EYE_H * expression.eyeScale);
+      eyeTopMV.set(EYE_TOP + expression.eyeOffsetY);
+      cheekOpacityMV.set(expression.cheekOpacity);
+      browRotateMV.set(expression.eyebrowRotation);
+      browYMV.set(expression.eyebrowHeight);
+      headTiltMV.set(expression.headTilt);
+      return;
+    }
+
+    let raf = 0;
+    const k = 0.09;
 
     const animate = (time: number) => {
-      timeRef.current = time;
       const t = time * 0.001;
+      const e = exprRef.current;
+      const s = smoothRef.current;
 
-      breath.set(Math.sin(t * 0.8) * 0.02);
-      bodySway.set(Math.sin(t * 0.5) * 0.5 * expression.bodySway);
-      sproutSway.set(Math.sin(t * 0.7) * 3);
-      earTwitch.set(Math.sin(t * 2.3) * 1.5);
+      s.eyeScale += (e.eyeScale - s.eyeScale) * k;
+      s.eyeOffsetY += (e.eyeOffsetY - s.eyeOffsetY) * k;
+      s.browRot += (e.eyebrowRotation - s.browRot) * k;
+      s.browY += (e.eyebrowHeight - s.browY) * k;
+      s.cheek += (e.cheekOpacity - s.cheek) * k;
+      s.tilt += (e.headTilt - s.tilt) * k;
 
-      if (Math.random() < 0.003 * expression.blinkSpeed) {
-        blink.set(0);
-        setTimeout(() => blink.set(1), 150);
+      breath.set(Math.sin(t * 0.9));
+      sproutRotateMV.set(Math.sin(t * 0.7) * 3);
+      bodyRotateMV.set(Math.sin(t * 0.5) * 0.6 * e.bodySway);
+      earLeftRotateMV.set(17 + Math.sin(t * 2.2) * 1.6);
+      earRightRotateMV.set(-17 + Math.sin(t * 2.2 + 1.3) * 1.6);
+
+      if (Math.random() < 0.003 * e.blinkSpeed) {
+        blink.set(0.05);
+        if (blinkTimeoutRef.current) window.clearTimeout(blinkTimeoutRef.current);
+        blinkTimeoutRef.current = window.setTimeout(() => blink.set(1), 140);
       }
 
-      headTilt.set(targetHeadTilt.get() + Math.sin(t * 0.3) * 1.5 * expression.bodySway);
+      const b = blink.get();
+      eyeHeightMV.set(EYE_H * s.eyeScale * b);
+      eyeWidthMV.set(EYE_W * (0.88 + 0.12 * b));
+      eyeTopMV.set(EYE_TOP + (1 - b) * 13 + s.eyeOffsetY);
+      eyeXMV.set(s.tilt * 0.25);
+      highlightOpacityMV.set(Math.min(1, b * 2));
+      browRotateMV.set(s.browRot);
+      browYMV.set(s.browY);
+      cheekOpacityMV.set(s.cheek);
+      headTiltMV.set(s.tilt + Math.sin(t * 0.35) * 1.3 * e.bodySway);
 
-      animationFrameRef.current = requestAnimationFrame(animate);
+      raf = requestAnimationFrame(animate);
     };
 
-    animationFrameRef.current = requestAnimationFrame(animate);
+    raf = requestAnimationFrame(animate);
     return () => {
-      if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
+      cancelAnimationFrame(raf);
+      if (blinkTimeoutRef.current) window.clearTimeout(blinkTimeoutRef.current);
     };
-  }, [mode, expression.bodySway, expression.blinkSpeed, reducedMotion, targetHeadTilt]);
+  }, [reducedMotion]);
 
-  const eyeHeight = useTransform(blink, (b) => 52 * b);
-  const eyeWidth = useTransform(blink, (b) => 42 * (b * 0.1 + 0.9));
-  const eyeTop = useTransform(blink, (b) => FACE_TOP + 40 + (1 - b) * 15);
-
-  const pupilOffsetX = useTransform(headTilt, (t) => t * 0.8);
-  const pupilOffsetY = useTransform(eyeOffsetY, (y) => y);
-
-  const mouthWidth = useTransform(blink, (b) => expression.mouthType === 'open' ? 40 + (1 - b) * 10 : 36);
-  const mouthHeight = useTransform(blink, (b) => expression.mouthType === 'open' ? 28 + (1 - b) * 8 : 20);
-
-  const earLeftRotate = useTransform(earTwitch, (e) => -20 + (e > 0 ? e : 0));
-  const earRightRotate = useTransform(earTwitch, (e) => 20 + (e < 0 ? e : 0));
-  const bodyRotate = useTransform(bodySway, (s) => s * 0.3);
-  const headRotate = useTransform(headTilt, (t) => t * 0.4);
-  const sproutRotate = useTransform(sproutSway, (s) => s);
-  const highlightOpacity = useTransform(blink, (b) => b);
-  const highlightX = useTransform(pupilOffsetX, (x) => x * 0.5);
-  const highlightY = useTransform(pupilOffsetY, (y) => y * 0.5);
-  const browRotate = useTransform(eyebrowRotation, (r) => r);
-  const browY = useTransform(eyebrowHeight, (y) => y);
-  const containerRotate = useTransform(headTilt, (t) => t);
-  const containerY = useTransform(breath, (b) => b * 4);
-  const containerScaleY = useTransform(breath, (b) => 1 - b * 0.02);
+  const containerY = useTransform(breath, (v) => v * 1.6);
+  const containerScaleY = useTransform(breath, (v) => 1 - v * 0.008);
 
   return (
-    <motion.div
+    <div
       className={`sage-character ${className}`}
       style={{
         position: 'relative',
-        width: CHARACTER_WIDTH * size,
-        height: CHARACTER_HEIGHT * size,
+        width: BASE_W,
+        height: BASE_H,
         transformOrigin: 'center bottom',
-        transform: `scale(${size})`,
-        rotate: containerRotate,
       }}
     >
-      <motion.div
+      <div
         style={{
           position: 'absolute',
-          bottom: 0,
-          left: '50%',
-          transform: 'translateX(-50%)',
-          width: CHARACTER_WIDTH,
-          height: CHARACTER_HEIGHT,
+          inset: 0,
           transformOrigin: 'center bottom',
-          y: containerY,
-          scaleY: containerScaleY,
+          transform: `scale(calc(${size} * var(--sage-char-scale, 1)))`,
         }}
       >
-        <BodyAndHoodie 
-          rotate={bodyRotate} 
-          width={CHARACTER_WIDTH} 
-          height={BODY_HEIGHT}
-        />
-        
-        <Head 
-          rotate={headRotate}
-          width={CHARACTER_WIDTH}
-          faceTop={FACE_TOP}
-          faceWidth={FACE_WIDTH}
-          faceHeight={FACE_HEIGHT}
-          eyeWidth={eyeWidth}
-          eyeHeight={eyeHeight}
-          eyeTop={eyeTop}
-          pupilOffsetX={pupilOffsetX}
-          pupilOffsetY={pupilOffsetY}
-          highlightOpacity={highlightOpacity}
-          highlightX={highlightX}
-          highlightY={highlightY}
-          browRotate={browRotate}
-          browY={browY}
-          cheekOpacity={cheekOpacity}
-          mouthType={expression.mouthType}
-          mouthWidth={mouthWidth}
-          mouthHeight={mouthHeight}
-          earLeftRotate={earLeftRotate}
-          earRightRotate={earRightRotate}
-          sproutRotate={sproutRotate}
-        />
-      </motion.div>
-    </motion.div>
+        <motion.div
+          style={{
+            position: 'absolute',
+            bottom: 0,
+            left: '50%',
+            x: '-50%',
+            width: BASE_W,
+            height: BASE_H,
+            y: containerY,
+            scaleY: containerScaleY,
+            transformOrigin: 'center bottom',
+          }}
+        >
+          <ContactShadow />
+
+          <motion.div
+            style={{
+              position: 'absolute',
+              inset: 0,
+              rotate: headTiltMV,
+              transformOrigin: `${NECK.x}px ${NECK.y}px`,
+            }}
+          >
+            <FloppyEar side="left" rotateMV={earLeftRotateMV} />
+            <FloppyEar side="right" rotateMV={earRightRotateMV} />
+            <CatEar side="left" />
+            <CatEar side="right" />
+            <Hood />
+            <Face
+              mouthType={expression.mouthType}
+              eyeLeftL={EYE_LEFT_L}
+              eyeLeftR={EYE_LEFT_R}
+              eyeTopMV={eyeTopMV}
+              eyeWidthMV={eyeWidthMV}
+              eyeHeightMV={eyeHeightMV}
+              eyeXMV={eyeXMV}
+              highlightOpacityMV={highlightOpacityMV}
+              browRotateMV={browRotateMV}
+              browYMV={browYMV}
+              cheekOpacityMV={cheekOpacityMV}
+            />
+            <Sprout rotateMV={sproutRotateMV} />
+            <Star />
+          </motion.div>
+
+          <motion.div
+            style={{
+              position: 'absolute',
+              top: BODY.top,
+              left: BODY.left,
+              width: BODY.width,
+              height: BODY.height,
+              background:
+                'radial-gradient(ellipse at 50% 4%, rgba(255,255,255,0.28) 0%, rgba(255,255,255,0) 48%), linear-gradient(180deg, #C4B1E4 0%, var(--sage-hood) 42%, #A690D2 78%, var(--sage-hood-dark) 100%)',
+              borderRadius: '50% 50% 42% 42% / 74% 74% 26% 26%',
+              boxShadow:
+                'inset 0 -16px 26px rgba(96,76,160,0.30), 0 10px 24px rgba(0,0,0,0.15)',
+              transformOrigin: '50% 100%',
+              rotate: bodyRotateMV,
+              zIndex: 6,
+            }}
+          >
+            <Paw side="left" />
+            <Paw side="right" />
+          </motion.div>
+        </motion.div>
+      </div>
+    </div>
   );
 };
 
 Character.displayName = 'Character';
 
-const BodyAndHoodie = ({ rotate, width, height }: { 
-  rotate: any; 
-  width: number; 
-  height: number; 
-}) => (
-  <motion.div
+const ContactShadow = () => (
+  <div
     style={{
       position: 'absolute',
-      bottom: 0,
-      left: '50%',
-      transform: `translateX(-50%)`,
-      width,
-      height,
-      background: 'linear-gradient(180deg, var(--color-lavender) 0%, var(--color-lavender-dark) 100%)',
-      borderRadius: `${width / 2}px ${width / 2}px 40px 40px`,
-      boxShadow: 'inset 0 -10px 20px rgba(0,0,0,0.05), 0 4px 12px var(--shadow-color)',
-      zIndex: 1,
-      transformOrigin: 'center bottom',
-    }}
-    animate={{ rotate }}
-  >
-    <div style={{
-      position: 'absolute',
-      bottom: 12,
-      left: width * 0.18,
-      width: width * 0.12,
-      height: 22,
-      background: 'var(--color-cream)',
-      borderRadius: '50% / 100% 100% 0 0',
-      boxShadow: 'inset 0 -3px 6px rgba(0,0,0,0.05)',
-    }} />
-    <div style={{
-      position: 'absolute',
-      bottom: 12,
-      right: width * 0.18,
-      width: width * 0.12,
-      height: 22,
-      background: 'var(--color-cream)',
-      borderRadius: '50% / 100% 100% 0 0',
-      boxShadow: 'inset 0 -3px 6px rgba(0,0,0,0.05)',
-    }} />
-  </motion.div>
-);
-
-const Head = ({ 
-  rotate,
-  width,
-  faceTop,
-  faceWidth,
-  faceHeight,
-  eyeWidth,
-  eyeHeight,
-  eyeTop,
-  pupilOffsetX,
-  pupilOffsetY,
-  highlightOpacity,
-  highlightX,
-  highlightY,
-  browRotate,
-  browY,
-  cheekOpacity,
-  mouthType,
-  mouthWidth,
-  mouthHeight,
-  earLeftRotate,
-  earRightRotate,
-  sproutRotate,
-}: any) => (
-  <motion.div
-    style={{
-      position: 'absolute',
-      bottom: BODY_HEIGHT - 40,
+      bottom: -8,
       left: '50%',
       transform: 'translateX(-50%)',
-      width,
-      height: 260,
-      transformOrigin: 'center bottom',
-    }}
-    animate={{ rotate }}
-  >
-    <Ear 
-      side="left" 
-      rotate={earLeftRotate} 
-      top={40} 
-      left={10} 
-      width={55} 
-      height={110} 
-    />
-    <Ear 
-      side="right" 
-      rotate={earRightRotate} 
-      top={40} 
-      right={10} 
-      width={55} 
-      height={110} 
-    />
-
-    <HoodFrame
-      top={faceTop - 20}
-      left="50%"
-      width={faceWidth + 40}
-      height={faceHeight + 60}
-    />
-
-    <Face
-      top={faceTop}
-      left="50%"
-      width={faceWidth}
-      height={faceHeight}
-      eyeWidth={eyeWidth}
-      eyeHeight={eyeHeight}
-      eyeTop={eyeTop}
-      pupilOffsetX={pupilOffsetX}
-      pupilOffsetY={pupilOffsetY}
-      highlightOpacity={highlightOpacity}
-      highlightX={highlightX}
-      highlightY={highlightY}
-      browRotate={browRotate}
-      browY={browY}
-      cheekOpacity={cheekOpacity}
-      mouthType={mouthType}
-      mouthWidth={mouthWidth}
-      mouthHeight={mouthHeight}
-    />
-
-    <CatEar side="left" top={-30} left={35} />
-    <CatEar side="right" top={-30} right={35} />
-
-    <Star top={-40} right={20} />
-
-    <Sprout top={-85} left="50%" rotate={sproutRotate} />
-  </motion.div>
-);
-
-const Ear = ({ 
-  side, 
-  rotate, 
-  top, 
-  left, 
-  right, 
-  width, 
-  height 
-}: { 
-  side: 'left' | 'right';
-  rotate: any;
-  top: number;
-  left?: number;
-  right?: number;
-  width: number;
-  height: number;
-}) => (
-  <motion.div
-    style={{
-      position: 'absolute',
-      top,
-      [side]: side === 'left' ? left! : undefined,
-      right: side === 'right' ? right! : undefined,
-      width,
-      height,
-      background: 'radial-gradient(ellipse at center, var(--color-cream) 0%, var(--color-cream-dark) 100%)',
-      borderRadius: '50% 50% 30% 30% / 60% 60% 40% 40%',
-      transformOrigin: 'bottom center',
-      boxShadow: `inset ${side === 'left' ? '-' : ''}5px 0 10px rgba(0,0,0,0.05)`,
+      width: 278,
+      height: 26,
+      background:
+        'radial-gradient(ellipse at center, rgba(28,18,48,0.38) 0%, rgba(28,18,48,0.16) 45%, rgba(28,18,48,0) 72%)',
       zIndex: 0,
     }}
-    animate={{ rotate }}
   />
 );
 
-const HoodFrame = ({ 
-  top, 
-  left, 
-  width, 
-  height 
-}: { 
-  top: number;
-  left: string;
-  width: number;
-  height: number;
+const FloppyEar = ({
+  side,
+  rotateMV,
+}: {
+  side: 'left' | 'right';
+  rotateMV: MotionValue<number>;
 }) => (
+  <motion.div
+    style={{
+      position: 'absolute',
+      top: 126,
+      left: side === 'left' ? 43 : 195,
+      width: 62,
+      height: 138,
+      background:
+        side === 'left'
+          ? 'radial-gradient(ellipse at 42% 35%, var(--sage-face-hi) 0%, var(--sage-face) 55%, var(--sage-face-shade) 100%)'
+          : 'radial-gradient(ellipse at 58% 35%, var(--sage-face-hi) 0%, var(--sage-face) 55%, var(--sage-face-shade) 100%)',
+      borderRadius: '50% 50% 44% 44% / 56% 56% 44% 44%',
+      boxShadow:
+        side === 'left'
+          ? 'inset -7px 2px 12px rgba(176,154,130,0.22), 0 4px 12px rgba(0,0,0,0.08)'
+          : 'inset 7px 2px 12px rgba(176,154,130,0.22), 0 4px 12px rgba(0,0,0,0.08)',
+      transformOrigin: '50% 6%',
+      zIndex: 1,
+      rotate: rotateMV,
+    }}
+  />
+);
+
+const CatEar = ({ side }: { side: 'left' | 'right' }) => (
   <div
     style={{
       position: 'absolute',
-      top,
-      left,
-      transform: 'translateX(-50%)',
-      width,
-      height,
-      background: 'linear-gradient(180deg, var(--color-lavender) 0%, var(--color-lavender-dark) 100%)',
-      borderRadius: '50% 50% 40% 40% / 60% 60% 40% 40%',
-      boxShadow: 'inset 0 0 20px rgba(168, 148, 209, 0.3), 0 8px 24px var(--shadow-color)',
+      top: 40,
+      left: side === 'left' ? 68 : 180,
+      width: 0,
+      height: 0,
+      borderLeft: '26px solid transparent',
+      borderRight: '26px solid transparent',
+      borderBottom: `54px solid var(--sage-cat-ear)`,
+      transform: `rotate(${side === 'left' ? -12 : 12}deg)`,
+      transformOrigin: '50% 100%',
+      filter: 'drop-shadow(0 2px 3px rgba(96,76,160,0.30))',
       zIndex: 2,
     }}
-  >
-    <div style={{
-      position: 'absolute',
-      bottom: 40,
-      left: '50%',
-      transform: 'translateX(-50%)',
-      width: 80,
-      height: 45,
-      background: 'rgba(255,255,255,0.12)',
-      borderRadius: '0 0 40px 40px',
-      border: '2px dashed rgba(255,255,255,0.25)',
-    }} />
-    <div style={{
-      position: 'absolute',
-      top: 55,
-      left: 30,
-      width: 7,
-      height: 28,
-      background: 'linear-gradient(180deg, var(--color-cream) 0%, var(--color-cream-dark) 100%)',
-      borderRadius: '4px',
-      transform: 'rotate(-8deg)',
-    }} />
-    <div style={{
-      position: 'absolute',
-      top: 55,
-      right: 30,
-      width: 7,
-      height: 28,
-      background: 'linear-gradient(180deg, var(--color-cream) 0%, var(--color-cream-dark) 100%)',
-      borderRadius: '4px',
-      transform: 'rotate(8deg)',
-    }} />
-  </div>
+  />
 );
 
-const Face = ({
-  top,
-  left,
-  width,
-  height,
-  eyeWidth,
-  eyeHeight,
-  eyeTop,
-  pupilOffsetX,
-  pupilOffsetY,
-  highlightOpacity,
-  highlightX,
-  highlightY,
-  browRotate,
-  browY,
-  cheekOpacity,
-  mouthType,
-  mouthWidth,
-  mouthHeight,
-}: any) => (
+const Hood = () => (
   <div
     style={{
       position: 'absolute',
-      top,
-      left,
-      transform: 'translateX(-50%)',
-      width,
-      height,
-      background: 'radial-gradient(ellipse at center, var(--color-cream) 0%, var(--color-cream-dark) 100%)',
-      borderRadius: '50% 50% 45% 45%',
-      boxShadow: 'inset 0 4px 12px rgba(168, 148, 209, 0.15), 0 4px 16px var(--shadow-color)',
+      top: HOOD.top,
+      left: HOOD.left,
+      width: HOOD.size,
+      height: HOOD.size,
+      background:
+        'radial-gradient(circle at 50% 30%, var(--sage-hood-hi) 0%, var(--sage-hood) 48%, #A189CF 84%, var(--sage-hood-dark) 100%)',
+      borderRadius: '50%',
+      boxShadow:
+        'inset 0 -14px 28px rgba(96,76,160,0.30), inset 0 10px 18px rgba(255,255,255,0.16), 0 12px 28px rgba(0,0,0,0.15)',
       zIndex: 3,
     }}
+  />
+);
+
+interface FaceProps {
+  mouthType: ModeExpression['mouthType'];
+  eyeLeftL: number;
+  eyeLeftR: number;
+  eyeTopMV: MotionValue<number>;
+  eyeWidthMV: MotionValue<number>;
+  eyeHeightMV: MotionValue<number>;
+  eyeXMV: MotionValue<number>;
+  highlightOpacityMV: MotionValue<number>;
+  browRotateMV: MotionValue<number>;
+  browYMV: MotionValue<number>;
+  cheekOpacityMV: MotionValue<number>;
+}
+
+const Face = ({
+  mouthType,
+  eyeLeftL,
+  eyeLeftR,
+  eyeTopMV,
+  eyeWidthMV,
+  eyeHeightMV,
+  eyeXMV,
+  highlightOpacityMV,
+  browRotateMV,
+  browYMV,
+  cheekOpacityMV,
+}: FaceProps) => (
+  <div
+    style={{
+      position: 'absolute',
+      top: FACE.top,
+      left: FACE.left,
+      width: FACE.size,
+      height: FACE.size,
+      background:
+        'radial-gradient(circle at 42% 34%, var(--sage-face-hi) 0%, var(--sage-face) 55%, var(--sage-face-shade) 100%)',
+      borderRadius: '50%',
+      boxShadow:
+        'inset 0 -8px 16px rgba(184,160,138,0.20), inset 0 6px 10px rgba(255,255,255,0.55), 0 4px 14px rgba(0,0,0,0.08)',
+      zIndex: 4,
+    }}
   >
-    <Eye 
+    <Eye
       side="left"
-      top={45}
-      left={50}
-      width={eyeWidth}
-      height={eyeHeight}
-      topPos={eyeTop}
-      pupilOffsetX={pupilOffsetX}
-      pupilOffsetY={pupilOffsetY}
-      highlightOpacity={highlightOpacity}
-      highlightX={highlightX}
-      highlightY={highlightY}
-      browRotate={browRotate}
-      browY={browY}
+      left={eyeLeftL}
+      topMV={eyeTopMV}
+      widthMV={eyeWidthMV}
+      heightMV={eyeHeightMV}
+      xMV={eyeXMV}
+      highlightOpacityMV={highlightOpacityMV}
+      browRotateMV={browRotateMV}
+      browYMV={browYMV}
     />
-    <Eye 
+    <Eye
       side="right"
-      top={45}
-      right={50}
-      width={eyeWidth}
-      height={eyeHeight}
-      topPos={eyeTop}
-      pupilOffsetX={pupilOffsetX}
-      pupilOffsetY={pupilOffsetY}
-      highlightOpacity={highlightOpacity}
-      highlightX={highlightX}
-      highlightY={highlightY}
-      browRotate={browRotate}
-      browY={browY}
+      left={eyeLeftR}
+      topMV={eyeTopMV}
+      widthMV={eyeWidthMV}
+      heightMV={eyeHeightMV}
+      xMV={eyeXMV}
+      highlightOpacityMV={highlightOpacityMV}
+      browRotateMV={browRotateMV}
+      browYMV={browYMV}
     />
-
-    <Cheek side="left" top={105} left={20} opacity={cheekOpacity} />
-    <Cheek side="right" top={105} right={20} opacity={cheekOpacity} />
-
-    <Mouth 
-      type={mouthType}
-      top={120}
-      left="50%"
-      width={mouthWidth}
-      height={mouthHeight}
-    />
+    <Cheek side="left" opacityMV={cheekOpacityMV} />
+    <Cheek side="right" opacityMV={cheekOpacityMV} />
+    <Mouth type={mouthType} />
   </div>
 );
+
+interface EyeProps {
+  side: 'left' | 'right';
+  left: number;
+  topMV: MotionValue<number>;
+  widthMV: MotionValue<number>;
+  heightMV: MotionValue<number>;
+  xMV: MotionValue<number>;
+  highlightOpacityMV: MotionValue<number>;
+  browRotateMV: MotionValue<number>;
+  browYMV: MotionValue<number>;
+}
 
 const Eye = ({
   side,
-  top,
   left,
-  right,
-  width,
-  height,
-  topPos,
-  pupilOffsetX,
-  pupilOffsetY,
-  highlightOpacity,
-  highlightX,
-  highlightY,
-  browRotate,
-  browY,
-}: any) => (
-  <>
-    <motion.div
-      style={{
-        position: 'absolute',
-        top,
-        [side]: side === 'left' ? left! : undefined,
-        right: side === 'right' ? right! : undefined,
-        width,
-        height,
-        background: 'radial-gradient(ellipse at 30% 30%, var(--color-brown-light) 0%, var(--color-brown) 60%, #1a1008 100%)',
-        borderRadius: '50% 50% 45% 45% / 55% 55% 45% 45%',
-        boxShadow: `inset 0 -3px 6px rgba(0,0,0,0.2), inset ${side === 'left' ? '2px' : '-2px'} 2px 4px rgba(255,255,255,0.1)`,
-        zIndex: 5,
-        transformOrigin: 'center center',
-      }}
-      animate={{ 
-        top: topPos,
-        translateX: pupilOffsetX,
-        translateY: pupilOffsetY,
-      }}
-    >
+  topMV,
+  widthMV,
+  heightMV,
+  xMV,
+  highlightOpacityMV,
+  browRotateMV,
+  browYMV,
+}: EyeProps) => {
+  const mirrored = side === 'right';
+  return (
+    <>
       <motion.div
         style={{
           position: 'absolute',
-          top: 12,
-          left: 10,
-          width: 14,
-          height: 14,
-          background: 'var(--color-white)',
+          left,
+          top: topMV,
+          width: widthMV,
+          height: heightMV,
+          x: xMV,
+          background:
+            'radial-gradient(circle at 34% 28%, var(--sage-eye-hi) 0%, var(--sage-eye) 52%, var(--sage-eye-deep) 100%)',
           borderRadius: '50%',
-          filter: 'blur(1px)',
-          zIndex: 6,
+          boxShadow:
+            'inset 0 -4px 8px rgba(0,0,0,0.25), 0 2px 4px rgba(0,0,0,0.10)',
+          zIndex: 5,
         }}
-        animate={{ 
-          opacity: highlightOpacity,
-          translateX: highlightX,
-          translateY: highlightY,
-        }}
-      />
+      >
+        <motion.div
+          style={{
+            position: 'absolute',
+            top: 7,
+            left: mirrored ? 31 : 8,
+            width: 15,
+            height: 15,
+            background: '#FFFFFF',
+            borderRadius: '50%',
+            filter: 'blur(0.5px)',
+            opacity: highlightOpacityMV,
+          }}
+        />
+        <motion.div
+          style={{
+            position: 'absolute',
+            top: 36,
+            left: mirrored ? 10 : 37,
+            width: 7,
+            height: 7,
+            background: 'rgba(255,255,255,0.8)',
+            borderRadius: '50%',
+            opacity: highlightOpacityMV,
+          }}
+        />
+      </motion.div>
+
       <motion.div
         style={{
           position: 'absolute',
-          top: 28,
-          left: 26,
-          width: 6,
-          height: 6,
-          background: 'var(--color-white)',
-          borderRadius: '50%',
-          zIndex: 6,
-        }}
-        animate={{ 
-          opacity: highlightOpacity,
-          translateX: highlightX,
-          translateY: highlightY,
+          top: 26,
+          left: mirrored ? 116 : 40,
+          width: 28,
+          height: 7,
+          background: 'transparent',
+          borderTop: '2px solid rgba(75,58,46,0.35)',
+          borderRadius: '50% 50% 0 0',
+          transformOrigin: 'center',
+          rotate: browRotateMV,
+          y: browYMV,
+          zIndex: 4,
         }}
       />
-    </motion.div>
+    </>
+  );
+};
 
-    <motion.div
-      style={{
-        position: 'absolute',
-        top: 25,
-        [side]: side === 'left' ? 40 : undefined,
-        right: side === 'right' ? 40 : undefined,
-        width: 48,
-        height: 8,
-        background: 'transparent',
-        borderTop: '3px solid var(--color-brown)',
-        borderRadius: '50% 50% 0 0',
-        transformOrigin: 'center center',
-        zIndex: 4,
-      }}
-      animate={{ 
-        rotate: browRotate,
-        y: browY,
-      }}
-    />
-  </>
-);
-
-const Cheek = ({ 
-  side, 
-  top, 
-  left, 
-  right, 
-  opacity 
-}: { 
+const Cheek = ({
+  side,
+  opacityMV,
+}: {
   side: 'left' | 'right';
-  top: number;
-  left?: number;
-  right?: number;
-  opacity: any;
+  opacityMV: MotionValue<number>;
 }) => (
   <motion.div
     style={{
       position: 'absolute',
-      top,
-      [side]: side === 'left' ? left! : undefined,
-      right: side === 'right' ? right! : undefined,
-      width: 36,
-      height: 24,
-      background: 'radial-gradient(ellipse at center, var(--color-pink) 0%, transparent 70%)',
+      top: 98,
+      left: side === 'left' ? 16 : 122,
+      width: 46,
+      height: 36,
+      background:
+        'radial-gradient(ellipse at center, var(--sage-blush) 0%, rgba(255,199,216,0.55) 45%, rgba(255,199,216,0) 72%)',
       borderRadius: '50%',
-      filter: 'blur(4px)',
+      filter: 'blur(5px)',
+      opacity: opacityMV,
       zIndex: 3,
     }}
-    animate={{ opacity }}
   />
 );
 
-const Mouth = ({ 
-  type, 
-  top, 
-  left, 
-  width, 
-  height 
-}: { 
-  type: string;
-  top: number;
-  left: string;
-  width: any;
-  height: any;
-}) => {
+const Mouth = ({ type }: { type: ModeExpression['mouthType'] }) => {
+  const base: React.CSSProperties = {
+    position: 'absolute',
+    top: 122,
+    left: '50%',
+    transform: 'translateX(-50%)',
+    zIndex: 5,
+  };
+
   if (type === 'open') {
-    return (
-      <motion.div
-        style={{
-          position: 'absolute',
-          top,
-          left,
-          transform: 'translateX(-50%)',
-          width,
-          height,
-          background: 'radial-gradient(ellipse at center, var(--color-pink-dark) 0%, var(--color-pink) 100%)',
-          borderRadius: '50% 50% 40% 40%',
-          zIndex: 4,
-        }}
-      >
-        <div style={{
-          position: 'absolute',
-          top: 10,
-          left: '50%',
-          transform: 'translateX(-50%)',
-          width: 20,
-          height: 16,
-          background: 'radial-gradient(ellipse at center, #ff8fa3 0%, #ff6b8a 100%)',
-          borderRadius: '0 0 50% 50%',
-          zIndex: 5,
-        }} />
-      </motion.div>
-    );
-  }
-  if (type === 'smile') {
-    return (
-      <motion.div
-        style={{
-          position: 'absolute',
-          top,
-          left,
-          transform: 'translateX(-50%)',
-          width,
-          height: 22,
-          background: 'transparent',
-          borderBottom: '3px solid var(--color-brown)',
-          borderRadius: '0 0 60% 60% / 0 0 90% 90%',
-          zIndex: 5,
-        }}
-      />
-    );
-  }
-  if (type === 'thinking') {
     return (
       <div
         style={{
-          position: 'absolute',
-          top: top + 3,
-          left,
-          transform: 'translateX(-50%)',
-          width: 28,
+          ...base,
+          top: 118,
+          width: 34,
+          height: 26,
+          background:
+            'radial-gradient(ellipse at center, #F09AB0 0%, #E8829E 100%)',
+          borderRadius: '50% 50% 42% 42%',
+          boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.12)',
+        }}
+      >
+        <div
+          style={{
+            position: 'absolute',
+            top: 10,
+            left: '50%',
+            transform: 'translateX(-50%)',
+            width: 18,
+            height: 12,
+            background: 'linear-gradient(180deg, #FF9FB2 0%, #F27E97 100%)',
+            borderRadius: '0 0 50% 50%',
+          }}
+        />
+      </div>
+    );
+  }
+
+  if (type === 'neutral') {
+    return (
+      <div
+        style={{
+          ...base,
+          top: 126,
+          width: 26,
           height: 12,
           background: 'transparent',
-          borderBottom: '2px solid var(--color-brown)',
-          borderRadius: '0 0 30% 30%',
-          zIndex: 5,
+          borderBottom: '2.5px solid var(--sage-eye)',
+          borderRadius: '0 0 50% 50% / 0 0 100% 100%',
         }}
       />
     );
   }
+
   if (type === 'calm') {
     return (
       <div
         style={{
-          position: 'absolute',
-          top: top + 3,
-          left,
-          transform: 'translateX(-50%)',
-          width: 32,
-          height: 16,
+          ...base,
+          top: 126,
+          width: 28,
+          height: 12,
           background: 'transparent',
-          borderBottom: '2px solid var(--color-brown)',
-          borderRadius: '0 0 40% 40% / 0 0 60% 60%',
-          opacity: 0.7,
-          zIndex: 5,
+          borderBottom: '2px solid rgba(75,58,46,0.8)',
+          borderRadius: '0 0 50% 50% / 0 0 100% 100%',
         }}
       />
     );
   }
+
+  if (type === 'thinking') {
+    return (
+      <div
+        style={{
+          ...base,
+          top: 126,
+          width: 20,
+          height: 10,
+          background: 'transparent',
+          borderBottom: '2px solid rgba(75,58,46,0.85)',
+          borderRadius: '0 0 40% 40%',
+          rotate: '-8deg',
+        }}
+      />
+    );
+  }
+
   return (
-    <motion.div
+    <div
       style={{
-        position: 'absolute',
-        top,
-        left,
-        transform: 'translateX(-50%)',
-        width,
-        height: 20,
+        ...base,
+        width: 34,
+        height: 16,
         background: 'transparent',
-        borderBottom: '3px solid var(--color-brown)',
-        borderRadius: '0 0 50% 50% / 0 0 80% 80%',
-        zIndex: 5,
+        borderBottom: '3px solid var(--sage-eye)',
+        borderRadius: '0 0 50% 50% / 0 0 100% 100%',
       }}
     />
   );
 };
 
-const CatEar = ({ 
-  side, 
-  top, 
-  left, 
-  right 
-}: { 
-  side: 'left' | 'right';
-  top: number;
-  left?: number;
-  right?: number;
-}) => (
+const Paw = ({ side }: { side: 'left' | 'right' }) => (
   <div
     style={{
       position: 'absolute',
-      top,
-      [side]: side === 'left' ? left! : undefined,
-      right: side === 'right' ? right! : undefined,
-      width: 0,
-      height: 0,
-      borderLeft: '25px solid transparent',
-      borderRight: '25px solid transparent',
-      borderBottom: '50px solid var(--color-lavender-dark)',
-      transform: side === 'left' ? 'rotate(-10deg)' : 'rotate(10deg)',
-      zIndex: 4,
+      bottom: 0,
+      left: side === 'left' ? 45 : 153,
+      width: 54,
+      height: 30,
+      background: 'linear-gradient(180deg, var(--sage-face) 0%, var(--sage-face-shade) 100%)',
+      borderRadius: '50% 50% 36% 36% / 94% 94% 10% 10%',
+      boxShadow: 'inset 0 -3px 6px rgba(176,154,130,0.28)',
     }}
   />
 );
 
-const Star = ({ 
-  top, 
-  right 
-}: { 
-  top: number;
-  right: number;
-}) => (
-  <div
-    style={{
-      position: 'absolute',
-      top,
-      right,
-      width: 28,
-      height: 28,
-      background: 'linear-gradient(135deg, var(--color-yellow) 0%, var(--color-yellow-dark) 100%)',
-      clipPath: 'polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%)',
-      filter: 'drop-shadow(0 2px 4px rgba(255,224,102,0.4))',
-      zIndex: 5,
-    }}
-  />
-);
-
-const Sprout = ({ 
-  top, 
-  left, 
-  rotate 
-}: { 
-  top: number;
-  left: string;
-  rotate: any;
+const Sprout = ({
+  rotateMV,
+}: {
+  rotateMV: MotionValue<number>;
 }) => (
   <motion.div
     style={{
       position: 'absolute',
-      top,
-      left,
-      transform: 'translateX(-50%)',
-      width: 12,
-      height: 40,
-      transformOrigin: 'bottom center',
-      zIndex: 5,
+      top: 36,
+      left: 150,
+      x: '-50%',
+      width: 7,
+      height: 56,
+      transformOrigin: '50% 100%',
+      zIndex: 8,
+      rotate: rotateMV,
     }}
-    animate={{ rotate }}
   >
-    <div style={{
-      position: 'absolute',
-      bottom: 0,
-      left: '50%',
-      transform: 'translateX(-50%)',
-      width: 6,
-      height: 30,
-      background: 'linear-gradient(180deg, var(--color-green) 0%, var(--color-green-dark) 100%)',
-      borderRadius: '3px',
-    }} />
-    <div style={{
-      position: 'absolute',
-      top: 8,
-      left: -12,
-      width: 0,
-      height: 0,
-      borderLeft: '14px solid transparent',
-      borderRight: '14px solid transparent',
-      borderBottom: '20px solid var(--color-green)',
-      transform: 'rotate(-30deg)',
-      borderRadius: '0 0 50% 0',
-    }} />
-    <div style={{
-      position: 'absolute',
-      top: 8,
-      right: -12,
-      width: 0,
-      height: 0,
-      borderLeft: '14px solid transparent',
-      borderRight: '14px solid transparent',
-      borderBottom: '20px solid var(--color-green)',
-      transform: 'rotate(30deg)',
-      borderRadius: '0 0 0 50%',
-    }} />
+    <div
+      style={{
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        width: 7,
+        height: 44,
+        background: 'linear-gradient(180deg, var(--sage-sprout) 0%, var(--sage-sprout-dark) 100%)',
+        borderRadius: 4,
+      }}
+    />
+    <div
+      style={{
+        position: 'absolute',
+        top: 0,
+        left: -19,
+        width: 32,
+        height: 24,
+        background:
+          'radial-gradient(circle at 40% 35%, #A8F0BA 0%, var(--sage-sprout) 55%, var(--sage-sprout-dark) 100%)',
+        borderRadius: '50%',
+        transform: 'rotate(-36deg)',
+        boxShadow: '0 2px 4px rgba(0,0,0,0.08)',
+      }}
+    />
+    <div
+      style={{
+        position: 'absolute',
+        top: 0,
+        right: -19,
+        width: 32,
+        height: 24,
+        background:
+          'radial-gradient(circle at 60% 35%, #A8F0BA 0%, var(--sage-sprout) 55%, var(--sage-sprout-dark) 100%)',
+        borderRadius: '50%',
+        transform: 'rotate(36deg)',
+        boxShadow: '0 2px 4px rgba(0,0,0,0.08)',
+      }}
+    />
   </motion.div>
+);
+
+const Star = () => (
+  <div
+    style={{
+      position: 'absolute',
+      top: 41,
+      left: 223,
+      width: 34,
+      height: 34,
+      background:
+        'linear-gradient(180deg, #FFE7A3 0%, var(--sage-star) 55%, #EFBC4C 100%)',
+      clipPath:
+        'polygon(50% 0%, 61.8% 35%, 98% 35%, 68% 57%, 79.9% 91%, 50% 70%, 20.1% 91%, 32% 57%, 2% 35%, 38.2% 35%)',
+      transform: 'rotate(-6deg)',
+      filter: 'drop-shadow(0 3px 6px rgba(255,209,102,0.40))',
+      zIndex: 8,
+    }}
+  />
 );

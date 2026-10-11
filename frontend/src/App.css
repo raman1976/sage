@@ -42,21 +42,21 @@ body {
   }
 }
 
-@media (max-width: 852px) and (orientation: landscape) {
+@media (max-height: 450px) and (orientation: landscape) {
   .sage-character {
-    transform: scale(0.9) !important;
+    --sage-char-scale: 0.85;
   }
 }
 
-@media (max-width: 740px) and (orientation: landscape) {
+@media (max-height: 380px) and (orientation: landscape) {
   .sage-character {
-    transform: scale(0.8) !important;
+    --sage-char-scale: 0.72;
   }
 }
 
-@media (max-width: 600px) {
+@media (max-width: 620px) and (orientation: portrait) {
   .sage-character {
-    transform: scale(0.75) !important;
+    --sage-char-scale: 0.8;
   }
 }
 

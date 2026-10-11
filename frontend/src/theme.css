@@ -70,6 +70,21 @@
   --shadow-color-strong: rgba(0, 0, 0, 0.5);
   --accent-glow: rgba(185, 161, 221, 0.25);
 
+  --sage-face: #F6EBDC;
+  --sage-face-hi: #FDF5EA;
+  --sage-face-shade: #EAD9C2;
+  --sage-hood: #B9A1DD;
+  --sage-hood-hi: #CBB9E8;
+  --sage-hood-dark: #8F7AD6;
+  --sage-cat-ear: #A78ED2;
+  --sage-eye: #4B3A2E;
+  --sage-eye-hi: #6A5243;
+  --sage-eye-deep: #31241B;
+  --sage-blush: #FFC7D8;
+  --sage-sprout: #8FE3A1;
+  --sage-sprout-dark: #6ECF8A;
+  --sage-star: #FFD166;
+
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   --safe-left: env(safe-area-inset-left, 0px);
