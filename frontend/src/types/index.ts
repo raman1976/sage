@@ -1,4 +1,4 @@
-export type SageMode = 'idle' | 'start' | 'focus' | 'calm' | 'plan' | 'listening' | 'thinking';
+export type SageMode = 'idle' | 'companion' | 'focus' | 'calm' | 'plan' | 'listening' | 'thinking';
 
 export type SageExpression = 'happy' | 'blink' | 'excited' | 'calm' | 'curious';
 
@@ -32,7 +32,7 @@ export interface ApiConfig {
 
 export const MODE_BUTTONS: ModeButtonConfig[] = [
   { id: 'focus', label: 'Focus', icon: '🍃', color: '#a8e6cf', gradient: 'linear-gradient(135deg, #a8e6cf 0%, #88d8a3 100%)' },
-  { id: 'start', label: 'Start', icon: '☀️', color: '#ffb3a7', gradient: 'linear-gradient(135deg, #ffb3a7 0%, #ff9a8c 100%)' },
+  { id: 'companion', label: 'Companion', icon: '💜', color: '#ffb3a7', gradient: 'linear-gradient(135deg, #ffb3a7 0%, #ff9a8c 100%)' },
   { id: 'calm', label: 'Calm', icon: '🌙', color: '#c5b4e3', gradient: 'linear-gradient(135deg, #c5b4e3 0%, #a894d1 100%)' },
   { id: 'plan', label: 'Plan', icon: '✨', color: '#a7d0ff', gradient: 'linear-gradient(135deg, #a7d0ff 0%, #8ab8e8 100%)' },
 ];

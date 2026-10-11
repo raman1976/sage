@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import type { SageMode, AgentState } from '../types';
 import { api } from '../services/api';
 
@@ -6,11 +6,16 @@ export const useAgentState = (pollInterval: number = 3000) => {
   const [state, setState] = useState<AgentState>({ mode: 'idle' });
   const [isConnected, setIsConnected] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // False when the backend can't persist modes (e.g. no POST route) — the
+  // frontend then stays the source of truth so polls don't revert the UI.
+  const backendAuthoritative = useRef(true);
 
   const fetchState = useCallback(async () => {
     try {
       const data = await api.getState();
-      setState(data);
+      if (backendAuthoritative.current) {
+        setState(data);
+      }
       setIsConnected(true);
       setError(null);
     } catch (err) {
@@ -26,13 +31,18 @@ export const useAgentState = (pollInterval: number = 3000) => {
   }, [fetchState, pollInterval]);
 
   const setMode = useCallback(async (mode: SageMode) => {
+    // Update locally first so the UI responds instantly and works offline;
+    // backend sync is best-effort.
+    setState({ mode });
     try {
       const data = await api.setMode(mode);
+      backendAuthoritative.current = true;
       setState(data);
       return data;
     } catch (err) {
+      backendAuthoritative.current = false;
       setError(err instanceof Error ? err.message : 'Failed to set mode');
-      throw err;
+      return { mode };
     }
   }, []);
 

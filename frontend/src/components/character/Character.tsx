@@ -37,11 +37,22 @@ const MODE_EXPRESSION: Record<SageMode, SageExpression> = {
   thinking: 'curious',
   focus: 'calm',
   calm: 'calm',
-  start: 'happy',
+  companion: 'happy',
   plan: 'happy',
 };
 
 export const expressionForMode = (mode: SageMode): SageExpression => MODE_EXPRESSION[mode] ?? 'happy';
+
+/** Ambient glow level per mode. Plan brightens via the excited flash (see below). */
+const MODE_GLOW: Record<SageMode, number> = {
+  idle: 0.7,
+  companion: 0.85,
+  focus: 0.6,
+  calm: 0.5,
+  plan: 0.7,
+  listening: 0.7,
+  thinking: 0.7,
+};
 
 const BASE_W = 300;
 const BASE_H = 380;
@@ -68,7 +79,7 @@ export const Character = ({ mode, expression, className = '', size = 1 }: Charac
       window.clearTimeout(tempTimerRef.current);
       tempTimerRef.current = null;
     }
-    if (mode === 'start') {
+    if (mode === 'companion') {
       setTempExpression('excited');
       tempTimerRef.current = window.setTimeout(() => setTempExpression(null), 1300);
     } else {
@@ -103,6 +114,12 @@ export const Character = ({ mode, expression, className = '', size = 1 }: Charac
   const earLeftRotateMV = useMotionValue(17);
   const earRightRotateMV = useMotionValue(-17);
   const bodyRotateMV = useMotionValue(0);
+  const glowMV = useMotionValue(MODE_GLOW[mode] ?? 0.7);
+
+  const modeRef = useRef(mode);
+  modeRef.current = mode;
+  const tempExprRef = useRef<SageExpression | null>(null);
+  tempExprRef.current = tempExpression;
 
   const smoothRef = useRef({
     eyeOpen: expressionConfig.eyeOpen,
@@ -115,6 +132,7 @@ export const Character = ({ mode, expression, className = '', size = 1 }: Charac
     sway: expressionConfig.sway,
     blinkRate: expressionConfig.blinkRate,
     highlightOn: expressionConfig.highlight !== 'none' ? 1 : 0,
+    glow: MODE_GLOW[mode] ?? 0.7,
   });
 
   const blinkRef = useRef({ next: 0, closing: false, start: 0 });
@@ -134,6 +152,7 @@ export const Character = ({ mode, expression, className = '', size = 1 }: Charac
       browYMV.set(c.browLift);
       headTiltMV.set(c.tilt);
       highlightOpacityMV.set(c.highlight !== 'none' ? 1 : 0);
+      glowMV.set(MODE_GLOW[modeRef.current] ?? 0.7);
       return;
     }
 
@@ -192,6 +211,15 @@ export const Character = ({ mode, expression, className = '', size = 1 }: Charac
       cheekOpacityMV.set(s.cheek);
       headTiltMV.set(s.tilt + Math.sin(t * 0.35) * 1.3 * s.sway);
 
+      // Mode-aware ambient glow. Brightens while the excited flash is active
+      // (e.g. Plan task completion), then settles back to the mode level.
+      const glowTarget = Math.min(
+        1,
+        (MODE_GLOW[modeRef.current] ?? 0.7) + (tempExprRef.current === 'excited' ? 0.3 : 0),
+      );
+      s.glow += (glowTarget - s.glow) * k;
+      glowMV.set(s.glow);
+
       raf = requestAnimationFrame(animate);
     };
 
@@ -235,7 +263,9 @@ export const Character = ({ mode, expression, className = '', size = 1 }: Charac
             transformOrigin: 'center bottom',
           }}
         >
-          <ContactShadow />
+          <AmbientHalo glowMV={glowMV} />
+          <GroundGlow glowMV={glowMV} />
+          <Decorations mode={mode} />
 
           <motion.div
             style={{
@@ -277,10 +307,10 @@ export const Character = ({ mode, expression, className = '', size = 1 }: Charac
               width: BODY.width,
               height: BODY.height,
               background:
-                'radial-gradient(ellipse at 50% 4%, rgba(255,255,255,0.28) 0%, rgba(255,255,255,0) 48%), linear-gradient(180deg, #C4B1E4 0%, var(--sage-hood) 42%, #A690D2 78%, var(--sage-hood-dark) 100%)',
+                'radial-gradient(ellipse at 50% 0%, rgba(255,255,255,0.34) 0%, rgba(255,255,255,0) 30%), radial-gradient(ellipse at 50% 4%, rgba(255,255,255,0.28) 0%, rgba(255,255,255,0) 48%), linear-gradient(180deg, #C4B1E4 0%, var(--sage-hood) 42%, #A690D2 78%, var(--sage-hood-dark) 100%)',
               borderRadius: '50% 50% 42% 42% / 74% 74% 26% 26%',
               boxShadow:
-                'inset 0 -16px 26px rgba(96,76,160,0.30), 0 10px 24px rgba(0,0,0,0.15)',
+                'inset 0 -16px 26px rgba(96,76,160,0.30), inset 7px 0 18px rgba(96,76,160,0.16), inset -7px 0 18px rgba(96,76,160,0.16), 0 10px 24px rgba(0,0,0,0.15)',
               transformOrigin: '50% 100%',
               rotate: bodyRotateMV,
               zIndex: 6,
@@ -297,21 +327,169 @@ export const Character = ({ mode, expression, className = '', size = 1 }: Charac
 
 Character.displayName = 'Character';
 
-const ContactShadow = () => (
-  <div
-    style={{
-      position: 'absolute',
-      bottom: -8,
-      left: '50%',
-      transform: 'translateX(-50%)',
-      width: 278,
-      height: 26,
-      background:
-        'radial-gradient(ellipse at center, rgba(28,18,48,0.38) 0%, rgba(28,18,48,0.16) 45%, rgba(28,18,48,0) 72%)',
-      zIndex: 0,
-    }}
-  />
-);
+const AmbientHalo = ({ glowMV }: { glowMV: MotionValue<number> }) => {
+  const haloOpacity = useTransform(glowMV, (g) => 0.3 + g * 0.4);
+  return (
+    <motion.div
+      style={{
+        position: 'absolute',
+        left: '50%',
+        top: '46%',
+        x: '-50%',
+        y: '-50%',
+        width: 440,
+        height: 440,
+        background:
+          'radial-gradient(circle at center, rgba(185,161,221,0.16) 0%, rgba(143,122,214,0.07) 42%, rgba(143,122,214,0) 68%)',
+        zIndex: 0,
+        opacity: haloOpacity,
+        pointerEvents: 'none',
+      }}
+    />
+  );
+};
+
+const GroundGlow = ({ glowMV }: { glowMV: MotionValue<number> }) => {
+  const glowOpacity = useTransform(glowMV, (g) => 0.5 + g * 0.5);
+  return (
+    <>
+      <motion.div
+        style={{
+          position: 'absolute',
+          bottom: -22,
+          left: '50%',
+          x: '-50%',
+          width: 340,
+          height: 62,
+          background:
+            'radial-gradient(ellipse at center, rgba(255,230,240,1) 0%, rgba(255,170,205,0.75) 35%, rgba(250,120,175,0.4) 55%, rgba(250,120,175,0) 80%)',
+          filter: 'blur(8px)',
+          zIndex: 0,
+          opacity: glowOpacity,
+          pointerEvents: 'none',
+        }}
+      />
+      <motion.div
+        style={{
+          position: 'absolute',
+          bottom: -10,
+          left: '50%',
+          x: '-50%',
+          width: 230,
+          height: 30,
+          background:
+            'radial-gradient(ellipse at center, rgba(255,240,246,1) 0%, rgba(255,185,215,0.65) 50%, rgba(250,120,175,0) 75%)',
+          filter: 'blur(4px)',
+          zIndex: 0,
+          opacity: glowOpacity,
+          pointerEvents: 'none',
+        }}
+      />
+      <div
+        style={{
+          position: 'absolute',
+          bottom: -2,
+          left: '50%',
+          transform: 'translateX(-50%)',
+          width: 190,
+          height: 18,
+          background:
+            'radial-gradient(ellipse at center, rgba(20,12,36,0.45) 0%, rgba(20,12,36,0) 70%)',
+          zIndex: 0,
+          pointerEvents: 'none',
+        }}
+      />
+    </>
+  );
+};
+
+interface DecorItem {
+  kind: 'dot' | 'spark' | 'heart';
+  left: number;
+  top: number;
+  size: number;
+  dur: number;
+  delay: number;
+  op: number;
+}
+
+const DECOR: DecorItem[] = [
+  { kind: 'heart', left: 16, top: 148, size: 14, dur: 7, delay: 0, op: 0.8 },
+  { kind: 'dot', left: 30, top: 88, size: 5, dur: 6, delay: 1, op: 0.7 },
+  { kind: 'spark', left: 258, top: 116, size: 12, dur: 8, delay: 0.5, op: 0.85 },
+  { kind: 'heart', left: 266, top: 188, size: 11, dur: 7.5, delay: 2, op: 0.7 },
+  { kind: 'dot', left: 50, top: 248, size: 4, dur: 5.5, delay: 1.5, op: 0.6 },
+  { kind: 'spark', left: 244, top: 58, size: 9, dur: 9, delay: 3, op: 0.7 },
+  { kind: 'dot', left: 88, top: 28, size: 4, dur: 6.5, delay: 2.5, op: 0.55 },
+];
+
+const Decorations = ({ mode }: { mode: SageMode }) => {
+  const still = mode === 'focus';
+  const dim = mode === 'calm' ? 0.55 : mode === 'focus' ? 0.6 : 1;
+  const slow = mode === 'calm' ? 1.6 : 1;
+  return (
+    <div
+      style={{
+        position: 'absolute',
+        inset: 0,
+        zIndex: 0,
+        pointerEvents: 'none',
+      }}
+      aria-hidden
+    >
+      {DECOR.map((d, i) => (
+        <div
+          key={i}
+          className="sage-decor"
+          style={{
+            position: 'absolute',
+            left: d.left,
+            top: d.top,
+            width: d.size,
+            height: d.size,
+            ['--sage-decor-op' as string]: d.op * dim,
+            animationDuration: `${d.dur * slow}s`,
+            animationDelay: `${d.delay}s`,
+            animationPlayState: still ? 'paused' : 'running',
+          }}
+        >
+          {d.kind === 'dot' && (
+            <div
+              style={{
+                width: '100%',
+                height: '100%',
+                borderRadius: '50%',
+                background: 'radial-gradient(circle at 35% 35%, #FFFFFF 0%, var(--sage-hood-hi) 60%, var(--sage-hood) 100%)',
+                boxShadow: '0 0 6px rgba(201,182,232,0.8)',
+              }}
+            />
+          )}
+          {d.kind === 'spark' && (
+            <div
+              style={{
+                width: '100%',
+                height: '100%',
+                background: 'linear-gradient(180deg, #FFFFFF 0%, var(--sage-hood-hi) 100%)',
+                clipPath:
+                  'polygon(50% 0%, 62% 38%, 100% 50%, 62% 62%, 50% 100%, 38% 62%, 0% 50%, 38% 38%)',
+                filter: 'drop-shadow(0 0 4px rgba(201,182,232,0.9))',
+              }}
+            />
+          )}
+          {d.kind === 'heart' && (
+            <svg width={d.size} height={d.size} viewBox="0 0 24 24" style={{ filter: 'drop-shadow(0 0 4px rgba(255,199,216,0.8))' }}>
+              <path
+                d="M12 21 C5 15 2 11 2 7.5 C2 4.5 4.5 2.5 7 2.5 C9 2.5 11 4 12 6 C13 4 15 2.5 17 2.5 C19.5 2.5 22 4.5 22 7.5 C22 11 19 15 12 21 Z"
+                fill="#FFC7D8"
+                opacity={0.9}
+              />
+            </svg>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+};
 
 const FloppyEar = ({
   side,
@@ -334,8 +512,8 @@ const FloppyEar = ({
       borderRadius: '50% 50% 44% 44% / 56% 56% 44% 44%',
       boxShadow:
         side === 'left'
-          ? 'inset -7px 2px 12px rgba(176,154,130,0.22), 0 4px 12px rgba(0,0,0,0.08)'
-          : 'inset 7px 2px 12px rgba(176,154,130,0.22), 0 4px 12px rgba(0,0,0,0.08)',
+          ? 'inset -7px 2px 12px rgba(176,154,130,0.22), inset 3px 0 8px rgba(143,122,214,0.14), 0 6px 14px rgba(0,0,0,0.10)'
+          : 'inset 7px 2px 12px rgba(176,154,130,0.22), inset -3px 0 8px rgba(143,122,214,0.14), 0 6px 14px rgba(0,0,0,0.10)',
       transformOrigin: '50% 6%',
       zIndex: 1,
       rotate: rotateMV,
@@ -356,7 +534,7 @@ const CatEar = ({ side }: { side: 'left' | 'right' }) => (
       borderBottom: `54px solid var(--sage-cat-ear)`,
       transform: `rotate(${side === 'left' ? -12 : 12}deg)`,
       transformOrigin: '50% 100%',
-      filter: 'drop-shadow(0 2px 3px rgba(96,76,160,0.30))',
+      filter: 'drop-shadow(0 3px 4px rgba(60,40,110,0.40))',
       zIndex: 2,
     }}
   />
@@ -371,10 +549,10 @@ const Hood = () => (
       width: HOOD.size,
       height: HOOD.size,
       background:
-        'radial-gradient(circle at 50% 30%, var(--sage-hood-hi) 0%, var(--sage-hood) 48%, #A189CF 84%, var(--sage-hood-dark) 100%)',
+        'radial-gradient(ellipse at 50% 10%, rgba(255,255,255,0.38) 0%, rgba(255,255,255,0) 42%), radial-gradient(circle at 50% 30%, var(--sage-hood-hi) 0%, var(--sage-hood) 48%, #A189CF 84%, var(--sage-hood-dark) 100%)',
       borderRadius: '50%',
       boxShadow:
-        'inset 0 -14px 28px rgba(96,76,160,0.30), inset 0 10px 18px rgba(255,255,255,0.16), 0 12px 28px rgba(0,0,0,0.15)',
+        'inset 0 -14px 28px rgba(96,76,160,0.30), inset 0 10px 18px rgba(255,255,255,0.16), inset 0 0 30px rgba(96,76,160,0.22), 0 12px 28px rgba(0,0,0,0.15)',
       zIndex: 3,
     }}
   />
@@ -419,10 +597,10 @@ const Face = ({
       width: FACE.size,
       height: FACE.size,
       background:
-        'radial-gradient(circle at 42% 34%, var(--sage-face-hi) 0%, var(--sage-face) 55%, var(--sage-face-shade) 100%)',
+        'radial-gradient(circle at 50% 50%, rgba(0,0,0,0) 62%, rgba(143,122,214,0.14) 100%), radial-gradient(circle at 42% 34%, var(--sage-face-hi) 0%, var(--sage-face) 55%, var(--sage-face-shade) 100%)',
       borderRadius: '50%',
       boxShadow:
-        'inset 0 -8px 16px rgba(184,160,138,0.20), inset 0 6px 10px rgba(255,255,255,0.55), 0 4px 14px rgba(0,0,0,0.08)',
+        'inset 0 -8px 16px rgba(184,160,138,0.20), inset 0 6px 10px rgba(255,255,255,0.55), inset 0 0 22px rgba(143,122,214,0.12), 0 4px 14px rgba(0,0,0,0.08)',
       zIndex: 4,
     }}
   >
@@ -733,9 +911,9 @@ const Paw = ({ side }: { side: 'left' | 'right' }) => (
       left: side === 'left' ? 45 : 153,
       width: 54,
       height: 30,
-      background: 'linear-gradient(180deg, var(--sage-face) 0%, var(--sage-face-shade) 100%)',
+      background: 'linear-gradient(180deg, var(--sage-face-hi) 0%, var(--sage-face) 55%, var(--sage-face-shade) 100%)',
       borderRadius: '50% 50% 36% 36% / 94% 94% 10% 10%',
-      boxShadow: 'inset 0 -3px 6px rgba(176,154,130,0.28)',
+      boxShadow: 'inset 0 -3px 6px rgba(176,154,130,0.28), inset 0 2px 3px rgba(255,255,255,0.5), 0 3px 6px rgba(0,0,0,0.10)',
     }}
   />
 );

@@ -2,6 +2,10 @@ import { motion } from 'motion/react';
 import type { SageMode, SageExpression } from '../../types';
 import { MODE_BUTTONS } from '../../types';
 import { Character } from '../character';
+import { CalmMode } from '../calm';
+import { CompanionMode } from '../companion';
+import { FocusMode } from '../focus';
+import { PlanMode } from '../plan';
 import { Header, InputField, ModeButton } from '../ui';
 import { useState, useCallback, useRef, useEffect } from 'react';
 
@@ -21,7 +25,17 @@ export const MainScreen = ({
   const [inputValue, setInputValue] = useState('');
   const [showWelcome, setShowWelcome] = useState(true);
   const [expressionOverride, setExpressionOverride] = useState<SageExpression | null>(null);
+  const [calmExpression, setCalmExpression] = useState<SageExpression | null>(null);
+  const [companionExpression, setCompanionExpression] = useState<SageExpression | null>(null);
+  const [planExpression, setPlanExpression] = useState<SageExpression | null>(null);
+  const [focusExpression, setFocusExpression] = useState<SageExpression | null>(null);
+  const [focusTask, setFocusTask] = useState<string | null>(null);
   const overrideTimerRef = useRef<number | null>(null);
+
+  const isCalm = currentMode === 'calm';
+  const isCompanion = currentMode === 'companion';
+  const isPlan = currentMode === 'plan';
+  const isFocus = currentMode === 'focus';
 
   const flashExpression = useCallback((expr: SageExpression, durationMs: number) => {
     if (overrideTimerRef.current) {
@@ -40,13 +54,13 @@ export const MainScreen = ({
   }, []);
 
   const handleInputChange = useCallback((value: string) => {
-    // Stay excited for as long as the user is typing. Each keystroke resets the
-    // timer, so Sage only settles back ~1.3s after the last keystroke.
-    if (value.trim()) {
+    // Stay excited for as long as the user is typing (outside Calm/Companion/
+    // Plan/Focus, where Sage holds its own expressions instead).
+    if (!isCalm && !isCompanion && !isPlan && !isFocus && value.trim()) {
       flashExpression('excited', 1300);
     }
     setInputValue(value);
-  }, [flashExpression]);
+  }, [flashExpression, isCalm, isCompanion, isPlan, isFocus]);
 
   const handleSubmit = useCallback((value: string) => {
     if (value.trim()) {
@@ -58,9 +72,46 @@ export const MainScreen = ({
 
   const handleModeClick = useCallback((mode: SageMode) => {
     if (mode !== currentMode) {
+      setCalmExpression(null);
+      setCompanionExpression(null);
+      setPlanExpression(null);
+      setFocusExpression(null);
       onModeChange(mode);
     }
   }, [currentMode, onModeChange]);
+
+  const handleCalmExit = useCallback(() => {
+    setCalmExpression(null);
+    onModeChange('idle');
+  }, [onModeChange]);
+
+  const handleCompanionExit = useCallback(() => {
+    setCompanionExpression(null);
+    onModeChange('idle');
+  }, [onModeChange]);
+
+  const handlePlanExit = useCallback(() => {
+    setPlanExpression(null);
+    onModeChange('idle');
+  }, [onModeChange]);
+
+  const handleFocusExit = useCallback(() => {
+    setFocusExpression(null);
+    onModeChange('idle');
+  }, [onModeChange]);
+
+  const handleStartFocus = useCallback((task: string) => {
+    setPlanExpression(null);
+    setFocusExpression(null);
+    setFocusTask(task);
+    onModeChange('focus');
+  }, [onModeChange]);
+
+  const handleConsumeFocusTask = useCallback(() => {
+    setFocusTask(null);
+  }, []);
+
+  const effectiveExpression = expressionOverride ?? calmExpression ?? companionExpression ?? planExpression ?? focusExpression ?? undefined;
 
   return (
     <motion.div
@@ -124,7 +175,7 @@ export const MainScreen = ({
           minWidth: '180px',
           zIndex: 10,
         }}>
-          <Character mode={currentMode} expression={expressionOverride ?? undefined} size={1} />
+          <Character mode={currentMode} expression={effectiveExpression} size={1} />
         </div>
 
         <div style={{
@@ -138,6 +189,21 @@ export const MainScreen = ({
           minWidth: 0,
           width: '100%',
         }}>
+          {isCalm ? (
+            <CalmMode onExit={handleCalmExit} onExpressionChange={setCalmExpression} />
+          ) : isCompanion ? (
+            <CompanionMode onExit={handleCompanionExit} onExpressionChange={setCompanionExpression} />
+          ) : isPlan ? (
+            <PlanMode onExit={handlePlanExit} onExpressionChange={setPlanExpression} onStartFocus={handleStartFocus} />
+          ) : isFocus ? (
+            <FocusMode
+              onExit={handleFocusExit}
+              onExpressionChange={setFocusExpression}
+              initialTask={focusTask}
+              onConsumeInitialTask={handleConsumeFocusTask}
+            />
+          ) : (
+          <>
           {showWelcome && (
             <motion.div
               initial={{ opacity: 0, y: 16 }}
@@ -180,6 +246,8 @@ export const MainScreen = ({
               autoFocus={!showWelcome}
             />
           </motion.div>
+          </>
+          )}
 
           <motion.div
             initial={{ opacity: 0, y: 16 }}
@@ -199,7 +267,6 @@ export const MainScreen = ({
                 {...btn}
                 isActive={btn.id === currentMode}
                 onClick={handleModeClick}
-                disabled={!isConnected}
               />
             ))}
           </motion.div>

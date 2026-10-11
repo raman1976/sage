@@ -8,7 +8,9 @@ function App() {
   const { state, isConnected, setMode } = useAgentState(3000);
 
   const handleModeChange = useCallback((mode: SageMode) => {
-    setMode(mode);
+    // Backend sync is best-effort; the UI switches mode locally regardless
+    // so features like Calm Mode work fully offline.
+    setMode(mode).catch(() => {});
   }, [setMode]);
 
   const handleSendMessage = useCallback((message: string) => {

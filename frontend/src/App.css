@@ -34,6 +34,24 @@ body {
   will-change: transform;
 }
 
+.sage-decor {
+  animation-name: sage-float;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+}
+
+@keyframes sage-float {
+  0%,
+  100% {
+    transform: translateY(0);
+    opacity: var(--sage-decor-op, 0.75);
+  }
+  50% {
+    transform: translateY(-7px);
+    opacity: calc(var(--sage-decor-op, 0.75) * 0.5);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .sage-character,
   .sage-character * {

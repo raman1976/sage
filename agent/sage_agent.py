@@ -3,7 +3,7 @@ from enum import Enum
 
 class SageMode(str, Enum):
     IDLE = "idle"
-    START = "start"
+    COMPANION = "companion"
     FOCUS = "focus"
     CALM = "calm"
     PLAN = "plan"
