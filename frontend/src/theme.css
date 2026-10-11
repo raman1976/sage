@@ -1,0 +1,83 @@
+:root {
+  --color-cream: #fdf2e8;
+  --color-cream-dark: #f5e6d8;
+  --color-peach: #ffdab9;
+  --color-peach-dark: #ffc8a0;
+  --color-lavender: #c5b4e3;
+  --color-lavender-dark: #a894d1;
+  --color-lavender-light: #e8dff8;
+  --color-brown: #4a3728;
+  --color-brown-light: #6b4f3a;
+  --color-pink: #ffb3c6;
+  --color-pink-dark: #ff9ab3;
+  --color-green: #88d8a3;
+  --color-green-dark: #6ec48a;
+  --color-yellow: #ffe066;
+  --color-yellow-dark: #ffd43d;
+  --color-white: #ffffff;
+  --color-black: #2d2d2d;
+
+  --color-mint: #a8e6cf;
+  --color-mint-dark: #88d8a3;
+  --color-peach-ui: #ffb3a7;
+  --color-peach-dark-ui: #ff9a8c;
+  --color-lavender-ui: #c5b4e3;
+  --color-lavender-dark-ui: #a894d1;
+  --color-sky: #a7d0ff;
+  --color-sky-dark: #8ab8e8;
+  --color-white-translucent: rgba(255, 255, 255, 0.9);
+  --text-primary: #4a3728;
+  --text-secondary: #6b4f3a;
+  --shadow-color: rgba(74, 55, 40, 0.15);
+  --shadow-color-strong: rgba(74, 55, 40, 0.25);
+
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 16px;
+  --spacing-lg: 24px;
+  --spacing-xl: 32px;
+  --spacing-xxl: 48px;
+
+  --radius-sm: 8px;
+  --radius-md: 16px;
+  --radius-lg: 24px;
+  --radius-xl: 32px;
+  --radius-full: 9999px;
+
+  --shadow-soft: 0 4px 12px var(--shadow-color), 0 2px 4px var(--shadow-color);
+  --shadow-medium: 0 8px 24px var(--shadow-color), 0 4px 8px var(--shadow-color);
+  --shadow-strong: 0 16px 48px var(--shadow-color-strong), 0 8px 16px var(--shadow-color-strong);
+  --shadow-inner: inset 0 2px 4px var(--shadow-color);
+
+  --transition-fast: 150ms ease-out;
+  --transition-normal: 250ms ease-out;
+  --transition-slow: 400ms ease-out;
+
+  --z-base: 0;
+  --z-character: 10;
+  --z-ui: 20;
+  --z-modal: 30;
+  --z-toast: 40;
+
+  --bg-sunset: linear-gradient(180deg, #ffdab9 0%, #ffb3a7 50%, #e8a8d8 100%);
+  --bg-desk: linear-gradient(180deg, #d4a574 0%, #c49564 100%);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-cream: #2d2520;
+    --color-cream-dark: #1f1a17;
+    --color-peach: #5c3a2e;
+    --color-peach-dark: #4a2e22;
+    --color-lavender: #3d3552;
+    --color-lavender-dark: #2e2842;
+    --color-brown: #c4b8a8;
+    --color-brown-light: #d4c8b8;
+    --text-primary: #f5efe8;
+    --text-secondary: #d4c8b8;
+    --shadow-color: rgba(0, 0, 0, 0.3);
+    --shadow-color-strong: rgba(0, 0, 0, 0.4);
+    --bg-sunset: linear-gradient(180deg, #2d1b2e 0%, #1a2e2e 50%, #2e1a2e 100%);
+    --bg-desk: linear-gradient(180deg, #3d2a1a 0%, #2e2015 100%);
+  }
+}
