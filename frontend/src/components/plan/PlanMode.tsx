@@ -144,12 +144,6 @@ function parseSteps(text: string): string[] {
     .slice(0, 5);
 }
 
-const BREAKDOWN_SYSTEM =
-  'You break a task into 3-5 small, concrete, actionable steps for someone with ADHD. Reply with ONLY a numbered list, one step per line, no intro or outro. Each step must be completable in under 15 minutes.';
-
-const STUCK_SYSTEM =
-  'The user is stuck on one step of a task. Reply with ONLY 2-3 even smaller numbered sub-steps, one per line, no intro or outro. The very first one must take under 2 minutes.';
-
 export const PlanMode = ({ onExit, onExpressionChange, onStartFocus }: PlanModeProps) => {
   const voice = useVoice();
   const [tab, setTab] = useState<PlanTab>('breakdown');
@@ -230,10 +224,7 @@ export const PlanMode = ({ onExit, onExpressionChange, onStartFocus }: PlanModeP
       onExpressionChange('curious');
       voice.stopListening();
       try {
-        const res = await api.chat([
-          { role: 'system', content: BREAKDOWN_SYSTEM },
-          { role: 'user', content: task },
-        ]);
+        const res = await api.chat('plan', `Break this task into 3-5 small, concrete, actionable steps:\n${task}`, []);
         const steps = res?.reply ? parseSteps(res.reply) : [];
         if (steps.length < 2) throw new Error('Unusable breakdown');
         setAiAvailable(true);
@@ -326,10 +317,7 @@ export const PlanMode = ({ onExit, onExpressionChange, onStartFocus }: PlanModeP
       setAiError(null);
       onExpressionChange('curious');
       try {
-        const res = await api.chat([
-          { role: 'system', content: STUCK_SYSTEM },
-          { role: 'user', content: `I'm stuck on this step: ${step.text}` },
-        ]);
+        const res = await api.chat('plan', `I'm stuck on this step: ${step.text}\n\nPlease split this into 2-3 even smaller sub-steps. The very first one must take under 2 minutes. Reply with ONLY a numbered list, one step per line.`, []);
         const subs = res?.reply ? parseSteps(res.reply) : [];
         if (subs.length < 2) throw new Error('Unusable split');
         setAiAvailable(true);
@@ -400,14 +388,7 @@ export const PlanMode = ({ onExit, onExpressionChange, onStartFocus }: PlanModeP
       const listing = tasks
         .map((t, i) => `${i + 1}. ${t.text} (urgency: ${t.urgency}, effort: ${t.effort}${t.deadline ? `, deadline: ${t.deadline}` : ''})`)
         .join('\n');
-      const res = await api.chat([
-        {
-          role: 'system',
-          content:
-            'You help someone with ADHD pick ONE task to start with, weighing urgency, deadlines, and effort. Reply in exactly this format:\nCHOICE: <the exact task text>\nWHY: <one short sentence>',
-        },
-        { role: 'user', content: `My tasks:\n${listing}` },
-      ]);
+      const res = await api.chat('plan', `My tasks:\n${listing}\n\nReply in exactly this format:\nCHOICE: <the exact task text>\nWHY: <one short sentence>`, []);
       const reply = res?.reply ?? '';
       const choice = /CHOICE:\s*(.+)/i.exec(reply)?.[1]?.trim() ?? '';
       const why = /WHY:\s*(.+)/i.exec(reply)?.[1]?.trim() ?? 'It looks like the best place to start.';

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { SageExpression } from '../../types';
-import { api, type ChatMessage } from '../../services/api';
+import { api } from '../../services/api';
 import { useVoice } from '../../hooks/useVoice';
 
 type CompanionView = 'options' | 'duck' | 'dump' | 'double' | 'roleplay';
@@ -270,11 +270,16 @@ function MicSendRow({
 
 export const CompanionMode = ({ onExit, onExpressionChange }: CompanionModeProps) => {
   const [view, setView] = useState<CompanionView>('options');
+  const [backendAlive, setBackendAlive] = useState(false);
 
   useEffect(() => {
     onExpressionChange('happy');
     return () => onExpressionChange(null);
   }, [onExpressionChange]);
+
+  useEffect(() => {
+    api.getHealth().then(() => setBackendAlive(true)).catch(() => setBackendAlive(false));
+  }, []);
 
   const go = useCallback(
     (v: CompanionView) => {
@@ -303,7 +308,9 @@ export const CompanionMode = ({ onExit, onExpressionChange }: CompanionModeProps
           <div style={card}>
             <p style={sageText}>I&apos;m here! What would you like to do together?</p>
             <p style={{ ...smallText, marginTop: 6, opacity: 0.75 }}>
-              Offline companion mode · conversational AI unavailable · everything stays on this device.
+              {backendAlive
+                ? 'Sage is connected · conversational AI is ready.'
+                : 'Offline companion mode · conversational AI unavailable · everything stays on this device.'}
             </p>
           </div>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -383,19 +390,11 @@ function DuckView({
 
       let reply: string | null = null;
       try {
-        const history: ChatMessage[] = [
-          {
-            role: 'system',
-            content:
-              'You are Sage, a rubber-duck thinking partner for someone with ADHD. Listen, reflect briefly, then ask exactly ONE thoughtful question that helps them reason. Never give solutions unless asked. Keep replies under 3 sentences.',
-          },
-          ...messages.slice(-6).map((m) => ({
-            role: (m.role === 'sage' ? 'assistant' : 'user') as 'assistant' | 'user',
-            content: m.text,
-          })),
-          { role: 'user', content: text },
-        ];
-        const res = await api.chat(history);
+        const history = messages.slice(-6).map((m) => ({
+          role: (m.role === 'sage' ? 'assistant' : 'user') as 'assistant' | 'user',
+          content: m.text,
+        }));
+        const res = await api.chat('companion', text, history);
         if (res?.reply) {
           reply = res.reply;
           setAiAvailable(true);
@@ -934,18 +933,11 @@ function RoleplayView({
 
       let reply: string | null = null;
       try {
-        const history: ChatMessage[] = [
-          {
-            role: 'system',
-            content: `You are roleplaying as ${who.trim() || 'the other person'} in a practice conversation about: ${about.trim() || 'an upcoming talk'}. Stay in character. Keep each reply to 1-3 sentences. React naturally, occasionally push back gently so the user can practice. Never break character to give advice.`,
-          },
-          ...messages.slice(-8).map((m) => ({
-            role: (m.role === 'sage' ? 'assistant' : 'user') as 'assistant' | 'user',
-            content: m.text,
-          })),
-          { role: 'user', content: text },
-        ];
-        const res = await api.chat(history);
+        const history = messages.slice(-8).map((m) => ({
+          role: (m.role === 'sage' ? 'assistant' : 'user') as 'assistant' | 'user',
+          content: m.text,
+        }));
+        const res = await api.chat('companion', text, history);
         if (res?.reply) {
           reply = res.reply;
           setAiAvailable(true);
@@ -972,18 +964,11 @@ function RoleplayView({
     onExpressionChange('curious');
     let fb: string | null = null;
     try {
-      const history: ChatMessage[] = [
-        {
-          role: 'system',
-          content: `You are Sage, a kind communication coach. The user just rehearsed a conversation with ${who.trim() || 'someone'} about ${about.trim() || 'something'}. Give 2-3 sentences of warm, specific feedback: one strength, one gentle tip. No judgment.`,
-        },
-        ...messages.slice(-8).map((m) => ({
-          role: (m.role === 'sage' ? 'assistant' : 'user') as 'assistant' | 'user',
-          content: m.text,
-        })),
-        { role: 'user', content: 'How did I do? Any feedback?' },
-      ];
-      const res = await api.chat(history);
+      const history = messages.slice(-8).map((m) => ({
+        role: (m.role === 'sage' ? 'assistant' : 'user') as 'assistant' | 'user',
+        content: m.text,
+      }));
+      const res = await api.chat('companion', 'How did I do? Any feedback?', history);
       if (res?.reply) {
         fb = res.reply;
         setAiAvailable(true);

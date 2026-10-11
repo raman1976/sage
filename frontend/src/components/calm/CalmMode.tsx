@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { motion } from 'motion/react';
 import type { SageExpression } from '../../types';
-import { api, type ChatMessage } from '../../services/api';
+import { api } from '../../services/api';
 import { useVoice } from '../../hooks/useVoice';
 
 type CalmView = 'options' | 'breathe' | 'ground' | 'talk' | 'done';
@@ -118,12 +118,17 @@ const SMALL_STEPS = [
 export const CalmMode = ({ onExit, onExpressionChange }: CalmModeProps) => {
   const [view, setView] = useState<CalmView>('options');
   const [doneFrom, setDoneFrom] = useState('that exercise');
+  const [backendAlive, setBackendAlive] = useState(false);
   const reduced = useReducedMotion();
 
   useEffect(() => {
     onExpressionChange('calm');
     return () => onExpressionChange(null);
   }, [onExpressionChange]);
+
+  useEffect(() => {
+    api.getHealth().then(() => setBackendAlive(true)).catch(() => setBackendAlive(false));
+  }, []);
 
   const goExercise = useCallback(
     (v: CalmView) => {
@@ -159,7 +164,9 @@ export const CalmMode = ({ onExit, onExpressionChange }: CalmModeProps) => {
           <div style={card}>
             <p style={sageText}>I&apos;m here with you. What would help right now?</p>
             <p style={{ ...smallText, marginTop: 6, opacity: 0.75 }}>
-              Offline comfort mode · conversational AI unavailable · everything stays on this device.
+              {backendAlive
+                ? 'Sage is connected · conversational AI is ready.'
+                : 'Offline comfort mode · conversational AI unavailable · everything stays on this device.'}
             </p>
           </div>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -460,19 +467,11 @@ function TalkView({
         if (!aiChecked) {
           setAiChecked(true);
         }
-        const history: ChatMessage[] = [
-          {
-            role: 'system',
-            content:
-              'You are Sage, a gentle ADHD support companion. Keep replies to 1-2 short sentences. Acknowledge feelings, ask at most one question, never judge, never give unsolicited productivity advice.',
-          },
-          ...messages.slice(-6).map((m) => ({
-            role: (m.role === 'sage' ? 'assistant' : 'user') as 'assistant' | 'user',
-            content: m.text,
-          })),
-          { role: 'user', content: text },
-        ];
-        const res = await api.chat(history);
+        const history = messages.slice(-6).map((m) => ({
+          role: (m.role === 'sage' ? 'assistant' : 'user') as 'assistant' | 'user',
+          content: m.text,
+        }));
+        const res = await api.chat('calm', text, history);
         if (res?.reply) {
           reply = res.reply;
           setAiAvailable(true);

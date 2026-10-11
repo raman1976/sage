@@ -1,11 +1,13 @@
 import type { AgentState, SageMode } from '../types';
 
 export interface ChatMessage {
-  role: 'user' | 'assistant' | 'system';
+  role: 'user' | 'assistant';
   content: string;
 }
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+const API_BASE =
+  import.meta.env.VITE_API_URL ||
+  `http://${window.location.hostname}:8000`;
 
 class ApiService {
   private baseUrl: string;
@@ -41,11 +43,15 @@ class ApiService {
    * No keys live in the frontend; throws when unavailable so callers can
    * fall back to the offline comfort flow.
    */
-  async chat(messages: ChatMessage[]): Promise<{ reply: string }> {
+  async chat(
+    mode: string,
+    message: string,
+    history: Array<{ role: 'user' | 'assistant'; content: string }> = []
+  ): Promise<{ reply: string }> {
     const response = await fetch(`${this.baseUrl}/api/chat`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ messages }),
+      body: JSON.stringify({ mode, message, history }),
     });
     if (!response.ok) throw new Error('AI companion unavailable');
     return response.json();
