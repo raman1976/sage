@@ -15,7 +15,11 @@ export const IconButton = ({
   disabled = false,
   className = ''
 }: IconButtonProps) => {
-  const hoverStyle = { scale: 1.1, background: 'rgba(255,255,255,0.95)', boxShadow: '0 8px 24px rgba(74, 55, 40, 0.12), 0 4px 8px rgba(74, 55, 40, 0.08)' };
+  const hoverStyle = { 
+    scale: 1.1, 
+    background: 'rgba(255,255,255,0.12)', 
+    boxShadow: '0 8px 24px rgba(0,0,0,0.3), 0 4px 8px rgba(0,0,0,0.2)' 
+  };
   const tapStyle = { scale: 0.95 };
 
   return (
@@ -31,17 +35,17 @@ export const IconButton = ({
         justifyContent: 'center',
         width: '44px',
         height: '44px',
-        background: 'rgba(255,255,255,0.8)',
+        background: 'rgba(255,255,255,0.06)',
         backdropFilter: 'blur(10px)',
         WebkitBackdropFilter: 'blur(10px)',
-        border: 'none',
+        border: '1px solid var(--border-color)',
         borderRadius: '9999px',
-        boxShadow: '0 4px 12px rgba(74, 55, 40, 0.08), 0 2px 4px rgba(74, 55, 40, 0.05)',
+        boxShadow: '0 4px 12px rgba(0,0,0,0.25), 0 2px 4px rgba(0,0,0,0.15)',
         cursor: disabled ? 'not-allowed' : 'pointer',
-        opacity: disabled ? 0.5 : 1,
+        opacity: disabled ? 0.4 : 1,
         fontSize: '20px',
         lineHeight: 1,
-        color: '#4a3728',
+        color: 'var(--text-primary)',
         userSelect: 'none',
       }}
       whileHover={!disabled ? hoverStyle : undefined}
@@ -68,29 +72,29 @@ export const Header = ({ onSettingsClick, onCustomizeClick }: HeaderProps) => (
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    padding: '24px 32px',
+    padding: 'clamp(12px, 3vh, 20px) clamp(16px, 4vw, 24px)',
     zIndex: 20,
     pointerEvents: 'none',
   }}>
     <div style={{ 
       display: 'flex', 
       alignItems: 'center', 
-      gap: '8px',
+      gap: '10px',
       pointerEvents: 'auto',
     }}>
       <span style={{
-        fontSize: '20px',
-        filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.1))',
+        fontSize: 'clamp(18px, 4vw, 22px)',
+        filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.4))',
       }}>
         🌱
       </span>
       <span style={{
-        fontSize: '24px',
+        fontSize: 'clamp(20px, 4.5vw, 26px)',
         fontWeight: 700,
         fontFamily: 'Georgia, serif',
-        color: '#4a3728',
-        textShadow: '0 2px 4px rgba(255,255,255,0.3)',
-        letterSpacing: '-0.5px',
+        color: 'var(--text-primary)',
+        letterSpacing: '-0.4px',
+        textShadow: '0 2px 8px rgba(0,0,0,0.3)',
       }}>
         Sage
       </span>

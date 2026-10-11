@@ -39,12 +39,11 @@ export const MainScreen = ({
     <motion.div
       style={{
         position: 'relative',
-        width: '100vw',
-        height: '100vh',
-        minHeight: '100dvh',
-        maxWidth: '100vw',
+        width: '100dvw',
+        height: '100dvh',
+        maxWidth: '100dvw',
         overflow: 'hidden',
-        background: 'linear-gradient(180deg, #ffdab9 0%, #ffb3a7 50%, #e8a8d8 100%)',
+        background: 'var(--bg-main)',
         fontFamily: 'system-ui, -apple-system, sans-serif',
       }}
       initial={{ opacity: 0 }}
@@ -54,10 +53,10 @@ export const MainScreen = ({
       <div style={{
         position: 'absolute',
         inset: 0,
-        backgroundImage: `
-          radial-gradient(ellipse 80% 50% at 20% 20%, rgba(255,218,185,0.4) 0%, transparent 50%),
-          radial-gradient(ellipse 60% 40% at 80% 30%, rgba(232,168,216,0.3) 0%, transparent 50%),
-          radial-gradient(ellipse 50% 30% at 50% 80%, rgba(168,216,163,0.2) 0%, transparent 50%)
+        background: `
+          radial-gradient(ellipse 60% 50% at 15% 20%, rgba(185,161,221,0.08) 0%, transparent 60%),
+          radial-gradient(ellipse 50% 40% at 85% 25%, rgba(185,161,221,0.06) 0%, transparent 55%),
+          radial-gradient(ellipse 40% 30% at 50% 90%, rgba(185,161,221,0.04) 0%, transparent 50%)
         `,
         pointerEvents: 'none',
       }} />
@@ -67,54 +66,11 @@ export const MainScreen = ({
         bottom: 0,
         left: 0,
         right: 0,
-        height: '120px',
-        background: 'linear-gradient(180deg, #d4a574 0%, #c49564 100%)',
-        borderTopLeftRadius: '40px',
-        borderTopRightRadius: '40px',
-        boxShadow: 'inset 0 20px 40px rgba(0,0,0,0.1)',
+        height: 'clamp(80px, 22vh, 100px)',
+        background: 'linear-gradient(180deg, transparent 0%, var(--bg-secondary) 40%, var(--bg-main) 100%)',
+        pointerEvents: 'none',
         zIndex: 0,
-      }}>
-        <div style={{
-          position: 'absolute',
-          bottom: '120px',
-          left: '10%',
-          width: '60px',
-          height: '80px',
-          background: 'linear-gradient(180deg, #4a7c2e 0%, #3a5f22 100%)',
-          borderRadius: '30px 30px 10px 10px',
-          transform: 'rotate(-3deg)',
-        }} />
-        <div style={{
-          position: 'absolute',
-          bottom: '120px',
-          left: '15%',
-          width: '40px',
-          height: '60px',
-          background: 'linear-gradient(180deg, #5a8c3e 0%, #4a7c2e 100%)',
-          borderRadius: '20px 20px 8px 8px',
-          transform: 'rotate(5deg)',
-        }} />
-        <div style={{
-          position: 'absolute',
-          bottom: '120px',
-          right: '12%',
-          width: '50px',
-          height: '70px',
-          background: 'linear-gradient(180deg, #8b4513 0%, #6b3510 100%)',
-          borderRadius: '50% 50% 20% 20%',
-        }}>
-          <div style={{
-            position: 'absolute',
-            top: '-30px',
-            left: '50%',
-            transform: 'translateX(-50%)',
-            width: '55px',
-            height: '40px',
-            background: 'radial-gradient(ellipse at center, #e8a8d8 0%, #d48ab8 100%)',
-            borderRadius: '50%',
-          }} />
-        </div>
-      </div>
+      }} />
 
       <Header 
         onSettingsClick={() => console.log('Settings clicked')}
@@ -125,18 +81,20 @@ export const MainScreen = ({
         position: 'relative',
         display: 'flex',
         height: '100%',
-        padding: '48px 32px 48px',
+        padding: 'clamp(16px, 3vh, 24px) clamp(16px, 4vw, 32px) clamp(20px, 4vh, 32px)',
         boxSizing: 'border-box',
         alignItems: 'center',
         justifyContent: 'space-between',
+        gap: 'clamp(12px, 3vw, 24px)',
       }}>
         <div style={{
-          flex: '0 0 320px',
+          flex: '0 0 auto',
+          width: 'clamp(200px, 35vw, 280px)',
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
-          minWidth: '280px',
+          minWidth: '180px',
           zIndex: 10,
         }}>
           <Character mode={currentMode} size={1} />
@@ -144,37 +102,37 @@ export const MainScreen = ({
 
         <div style={{
           flex: 1,
-          maxWidth: '500px',
+          maxWidth: '480px',
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'flex-start',
           justifyContent: 'center',
-          paddingLeft: '32px',
-          gap: '24px',
+          gap: 'clamp(16px, 3vh, 22px)',
           minWidth: 0,
+          width: '100%',
         }}>
           {showWelcome && (
             <motion.div
-              initial={{ opacity: 0, y: 20 }}
+              initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.3, ease: 'easeOut' }}
+              transition={{ duration: 0.5, delay: 0.2, ease: 'easeOut' }}
               style={{ width: '100%' }}
             >
               <h1 style={{
                 margin: 0,
-                fontSize: '36px',
+                fontSize: 'clamp(24px, 5vw, 32px)',
                 fontWeight: 700,
-                color: '#4a3728',
+                color: 'var(--text-primary)',
                 lineHeight: 1.2,
-                letterSpacing: '-0.5px',
+                letterSpacing: '-0.3px',
               }}>
                 Hi, I&apos;m Sage!
               </h1>
               <p style={{
-                margin: '16px 0 0',
-                fontSize: '18px',
-                color: '#6b4f3a',
-                lineHeight: 1.5,
+                margin: 'clamp(8px, 2vh, 12px) 0 0',
+                fontSize: 'clamp(14px, 3vw, 16px)',
+                color: 'var(--text-secondary)',
+                lineHeight: 1.4,
               }}>
                 Ready to make today a little brighter? 🌱
               </p>
@@ -182,9 +140,9 @@ export const MainScreen = ({
           )}
 
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: showWelcome ? 0.5 : 0.2 }}
+            transition={{ duration: 0.4, delay: showWelcome ? 0.35 : 0.15 }}
             style={{ width: '100%' }}
           >
             <InputField
@@ -197,12 +155,12 @@ export const MainScreen = ({
           </motion.div>
 
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: showWelcome ? 0.7 : 0.3 }}
+            transition={{ duration: 0.4, delay: showWelcome ? 0.5 : 0.25 }}
             style={{ 
               display: 'flex', 
-              gap: '16px', 
+              gap: 'clamp(10px, 2.5vw, 14px)', 
               flexWrap: 'wrap',
               width: '100%',
               justifyContent: 'flex-start',
@@ -224,10 +182,10 @@ export const MainScreen = ({
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               style={{
-                margin: '16px 0 0',
-                fontSize: '13px',
-                color: '#6b4f3a',
-                opacity: 0.7,
+                margin: 'clamp(8px, 1.5vh, 12px) 0 0',
+                fontSize: 'clamp(11px, 2.5vw, 13px)',
+                color: 'var(--text-secondary)',
+                opacity: 0.6,
               }}
             >
               Connecting to Sage...
@@ -239,20 +197,20 @@ export const MainScreen = ({
       <motion.div
         style={{
           position: 'fixed',
-          bottom: '24px',
-          right: '24px',
-          width: '12px',
-          height: '12px',
+          bottom: 'clamp(12px, 3vh, 20px)',
+          right: 'clamp(12px, 3vw, 20px)',
+          width: '10px',
+          height: '10px',
           borderRadius: '50%',
-          background: isConnected ? '#a8e6cf' : '#ffb3a7',
-          boxShadow: `0 0 8px ${isConnected ? '#a8e6cf' : '#ffb3a7'}`,
+          background: isConnected ? 'var(--color-mint)' : 'var(--color-peach-ui)',
+          boxShadow: `0 0 10px ${isConnected ? 'var(--color-mint)' : 'var(--color-peach-ui)'}`,
           zIndex: 20,
         }}
         animate={{
-          scale: isConnected ? [1, 1.2, 1] : 1,
-          opacity: isConnected ? [1, 0.6, 1] : 1,
+          scale: isConnected ? [1, 1.15, 1] : 1,
+          opacity: isConnected ? [1, 0.5, 1] : 1,
         }}
-        transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+        transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
       />
     </motion.div>
   );
