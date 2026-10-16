@@ -106,6 +106,25 @@ def _strip_reasoning(content: str) -> str:
     if m and len(text) > len(m.group(1)) + 10:
         text = m.group(1).strip()
 
+    # 2b. Drop numbered analysis blocks ("1. **Analyze User Input:** ...")
+    # that some models emit before the real answer. Only triggers on 2+
+    # analysis-flavored headers so genuine numbered lists are preserved.
+    lines = text.split("\n")
+    header_idx = [
+        i for i, line in enumerate(lines)
+        if re.match(r"\s*\d+\.\s*\*\*.+\*\*", line)
+    ]
+    if len(header_idx) >= 2 and sum(
+        1 for i in header_idx
+        if re.search(r"analy[sz]e|persona|strategy|draft|internal|reasoning|thought|roadmap|outline", lines[i], re.IGNORECASE)
+    ) >= 2:
+        tail = "\n".join(lines[header_idx[-1] + 1:]).strip()
+        # Drafts are often wrapped in quotes — unwrap a matched pair.
+        if len(tail) >= 2 and tail[0] == tail[-1] and tail[0] in "\"'":
+            tail = tail[1:-1].strip()
+        if tail:
+            return tail
+
     # 3. Drop a leading reasoning preface ("Here's a thinking process: ...").
     markers = [
         "here's a thinking process:",

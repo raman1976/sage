@@ -43,6 +43,38 @@ const MODE_LABELS: Record<SuggestedMode, string> = {
 const AFFIRM_RE = /^(yes|yeah|yep|yup|sure|ok|okay|k|please|definitely|absolutely|of course|let'?s (do it|go)|sounds good|go ahead|do it|try it|i'?m in|why not)\b/i;
 const DECLINE_RE = /^(no|nope|nah|not really|i'?m good|maybe later|not now|pass|i'?ll stay|stay here|not yet)\b/i;
 
+/**
+ * Explicit navigation commands ("switch to calm mode", "let's switch to
+ * focus mode", "put me in plan mode"). Deterministic and offline-safe:
+ * a direct instruction is NOT a suggestion, so it navigates immediately
+ * with no confirmation card. Vague/implicit intent still goes through
+ * the Nemotron classifier + ask-first flow.
+ */
+const SWITCH_VERB = String.raw`let'?s\s+(?:switch|go)|switch(?:\s+\w+){0,2}\s+to|go\s+to|change\s+to|take\s+me\s+(?:to|into)|bring\s+me\s+to|put\s+me\s+in(?:to)?|(?:jump|hop)\s+into|move\s+to|open|start|enter|show\s+me|activate`;
+const MODE_ALIASES: Array<{ mode: SuggestedMode; names: string }> = [
+  { mode: 'calm', names: 'calm|breathe|breathing' },
+  { mode: 'focus', names: 'focus|timer|pomodoro' },
+  { mode: 'companion', names: 'companion' },
+  { mode: 'plan', names: 'plan' },
+];
+
+/** Questions ABOUT a mode ("what is calm mode?") are not commands. */
+const QUESTION_BLOCK_RE = /^(what('s| is)?|tell me|explain|describe|how (do|does)|what'?s the difference|difference|compare)\b/i;
+
+export function parseExplicitModeSwitch(text: string): SuggestedMode | null {
+  const t = text.trim().toLowerCase();
+  if (t.length === 0 || t.length > 80) return null;
+  if (QUESTION_BLOCK_RE.test(t)) return null;
+  for (const { mode, names } of MODE_ALIASES) {
+    const re = new RegExp(
+      `\\b(?:${SWITCH_VERB})\\b[\\w\\s',-]{0,24}?\\b(?:${names})\\b(\\s*mode)?`,
+      'i',
+    );
+    if (re.test(t)) return mode;
+  }
+  return null;
+}
+
 /** Short user reply that confirms / declines a pending suggestion, else null. */
 export function matchConfirmation(text: string): 'yes' | 'no' | null {
   const t = text.trim().toLowerCase().replace(/[.!…]+$/, '');

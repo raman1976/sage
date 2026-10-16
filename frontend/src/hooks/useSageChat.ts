@@ -54,12 +54,19 @@ function loadHistory(): SageChatMessage[] {
 /** Frontend safety net: never display anything resembling a reasoning trace. */
 function looksLikeReasoning(text: string): boolean {
   const head = text.slice(0, 220).toLowerCase();
-  return (
+  if (
     head.includes('thinking process') ||
     head.includes('chain of thought') ||
     head.includes('<think>') ||
+    head.includes('analyze user input') ||
+    head.includes('draft response') ||
+    head.includes('(internal)') ||
     head.startsWith('reasoning:')
-  );
+  ) {
+    return true;
+  }
+  // Numbered analysis outline ("1. **Analyze ...", "2. **Strategy ...").
+  return /^\s*\d+\.\s*\*\*(analyze|analysis|persona|strategy|draft|reasoning|thought|input)/i.test(text);
 }
 
 function offlineReply(message: string): string {

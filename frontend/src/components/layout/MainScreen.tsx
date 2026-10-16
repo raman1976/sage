@@ -12,7 +12,7 @@ import { MusicPlayer } from '../music';
 import { useMusicPlayer } from '../../hooks/useMusicPlayer';
 import { useVoice } from '../../hooks/useVoice';
 import { useSageChat } from '../../hooks/useSageChat';
-import { useModeSuggestion, matchConfirmation, type PendingSuggestion } from '../../hooks/useModeSuggestion';
+import { useModeSuggestion, matchConfirmation, parseExplicitModeSwitch, type PendingSuggestion } from '../../hooks/useModeSuggestion';
 import { useState, useCallback, useRef, useEffect } from 'react';
 
 interface MainScreenProps {
@@ -219,13 +219,27 @@ export const MainScreen = ({
     scheduleInactivityReset();
   }, [flashExpression, isCalm, isCompanion, isPlan, isFocus, scheduleInactivityReset]);
 
-  /** Home text/voice chat: confirmation-first, then Nemotron, then maybe suggest. */
+  /** Home text/voice chat: direct switch → suggestion answer → Nemotron → maybe suggest. */
   const handleHomeSubmit = useCallback(async (value: string) => {
     const text = value.trim();
     if (!text) return;
     scheduleInactivityReset();
 
-    // A pending suggestion gets first dibs — "yes"/"no" answers it (text or voice).
+    // 1. Explicit command ("switch to calm mode") — a direct instruction,
+    // not a suggestion. Navigate immediately, backend or not.
+    const direct = parseExplicitModeSwitch(text);
+    if (direct) {
+      suggest.clearSuggestion();
+      suggest.noteUserMessage();
+      onSendMessage(text);
+      setInputValue('');
+      setShowWelcome(false);
+      const prevUser = [...chat.messages].reverse().find((m) => m.role === 'user');
+      confirmSuggestion({ mode: direct, context: prevUser?.content ?? text, askLine: '' });
+      return;
+    }
+
+    // 2. A pending suggestion gets next dibs — "yes"/"no" answers it (text or voice).
     if (suggest.suggestion) {
       const verdict = matchConfirmation(text);
       if (verdict === 'yes') {
