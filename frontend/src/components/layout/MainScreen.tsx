@@ -114,6 +114,16 @@ export const MainScreen = ({
   const isCompanion = currentMode === 'companion';
   const isPlan = currentMode === 'plan';
   const isFocus = currentMode === 'focus';
+  const isHome = !isCalm && !isCompanion && !isPlan && !isFocus;
+
+  const handleBackToHome = useCallback(() => {
+    setCalmExpression(null);
+    setCompanionExpression(null);
+    setPlanExpression(null);
+    setFocusExpression(null);
+    setFocusTask(null);
+    onModeChange('idle');
+  }, [onModeChange]);
 
   const flashExpression = useCallback((expr: SageExpression, durationMs: number) => {
     if (overrideTimerRef.current) {
@@ -268,6 +278,7 @@ export const MainScreen = ({
             justifyContent: 'center',
             gap: 'clamp(6px, 1.5vh, 14px)',
             minWidth: '170px',
+            marginLeft: 'clamp(24px, 5vw, 60px)',
             zIndex: 10,
             position: 'relative',
           }}
@@ -307,6 +318,43 @@ export const MainScreen = ({
             zIndex: 10,
           }}
         >
+          {!isHome && (
+            <motion.button
+              type="button"
+              onClick={handleBackToHome}
+              initial={{ opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.35, ease: 'easeOut' }}
+              aria-label="Back to Home"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                background: 'rgba(46,41,56,0.5)',
+                backdropFilter: 'blur(10px)',
+                WebkitBackdropFilter: 'blur(10px)',
+                border: '1px solid var(--border-color)',
+                borderRadius: '9999px',
+                padding: 'clamp(6px, 1.5vh, 8px) clamp(12px, 2.5vw, 16px)',
+                color: 'var(--text-secondary)',
+                fontSize: 'clamp(12px, 2.8vw, 13px)',
+                fontFamily: 'var(--font-body)',
+                fontWeight: 500,
+                cursor: 'pointer',
+                WebkitTapHighlightColor: 'transparent',
+                alignSelf: 'flex-start',
+                flexShrink: 0,
+              }}
+              whileHover={{ scale: 1.03, color: 'var(--text-primary)' }}
+              whileTap={{ scale: 0.97 }}
+            >
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M7.5 2.5L3.5 6L7.5 9.5" />
+              </svg>
+              Back to Home
+            </motion.button>
+          )}
+
           {isCalm ? (
             <CalmMode onExit={handleCalmExit} onExpressionChange={setCalmExpression} />
           ) : isCompanion ? (
@@ -369,30 +417,30 @@ export const MainScreen = ({
                   autoFocus={!showWelcome}
                 />
               </motion.div>
+
+              {/* ---- 2×2 mode grid (Home only) ---- */}
+              <motion.div
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, delay: showWelcome ? 0.5 : 0.25 }}
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(2, 1fr)',
+                  gap: 'clamp(8px, 2vw, 12px)',
+                  width: '100%',
+                }}
+              >
+                {MODE_BUTTONS.map((btn) => (
+                  <ModeButton
+                    key={btn.id}
+                    {...btn}
+                    isActive={btn.id === currentMode}
+                    onClick={handleModeClick}
+                  />
+                ))}
+              </motion.div>
             </>
           )}
-
-          {/* ---- 2×2 mode grid ---- */}
-          <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4, delay: showWelcome ? 0.5 : 0.25 }}
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(2, 1fr)',
-              gap: 'clamp(8px, 2vw, 12px)',
-              width: '100%',
-            }}
-          >
-            {MODE_BUTTONS.map((btn) => (
-              <ModeButton
-                key={btn.id}
-                {...btn}
-                isActive={btn.id === currentMode}
-                onClick={handleModeClick}
-              />
-            ))}
-          </motion.div>
 
           {!isConnected && (
             <motion.p
