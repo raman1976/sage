@@ -251,6 +251,7 @@ export const MainScreen = ({
       <Header
         onSettingsClick={() => console.log('Settings clicked')}
         onCustomizeClick={() => console.log('Customize clicked')}
+        onLogoClick={handleBackToHome}
       />
 
       <main
@@ -270,14 +271,14 @@ export const MainScreen = ({
         <div
           style={{
             flex: '0 0 auto',
-            width: 'clamp(130px, 22vw, 280px)',
+            width: 'clamp(200px, 30vw, 420px)',
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
             justifyContent: 'center',
             gap: 'clamp(2px, 0.8vh, 10px)',
-            minWidth: '120px',
-            marginLeft: 'clamp(4px, 2vw, 36px)',
+            minWidth: '180px',
+            marginLeft: 'clamp(70px, 12vw, 160px)',
             zIndex: 10,
             position: 'relative',
             overflow: 'hidden',
@@ -319,6 +320,7 @@ export const MainScreen = ({
             maxHeight: '100%',
             minHeight: 0,
             overflow: 'hidden',
+            marginRight: 'clamp(16px, 3.5vw, 56px)',
             zIndex: 10,
           }}
         >

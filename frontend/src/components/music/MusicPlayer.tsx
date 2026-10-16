@@ -333,18 +333,18 @@ export const MusicPlayer = ({
     typeof window !== 'undefined' &&
     window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-// Detect compact landscape (iPhone 16 Pro ~402px height)
+// Compact when space is tight: short landscape screens OR narrow widths
   const [compact, setCompact] = useState(false);
   useEffect(() => {
-    const mq = window.matchMedia('(max-height: 420px) and (orientation: landscape)');
+    const mq = window.matchMedia('(max-height: 420px) and (orientation: landscape), (max-width: 500px)');
     const update = () => setCompact(mq.matches);
     update();
     mq.addEventListener('change', update);
     return () => mq.removeEventListener('change', update);
   }, []);
 
-  const artSize = compact ? 32 : 64;
-  const btnSize = compact ? 28 : 40;
+  const artSize = compact ? 40 : 60;
+  const btnSize = compact ? 32 : 40;
 
   return (
     <motion.div
@@ -355,40 +355,53 @@ export const MusicPlayer = ({
       aria-label="Music player"
       style={{
         width: '100%',
-        maxWidth: compact ? 240 : 380,
+        maxWidth: compact ? '100%' : 420,
+        minWidth: 0,
+        alignSelf: 'center',
         background: 'rgba(48, 43, 58, 0.55)',
         backdropFilter: 'blur(16px)',
         WebkitBackdropFilter: 'blur(16px)',
-        borderRadius: compact ? 10 : 18,
+        borderRadius: compact ? 12 : 18,
         border: '1px solid rgba(185,161,221,0.14)',
         boxShadow: '0 8px 32px rgba(0,0,0,0.35), 0 0 0 1px rgba(185,161,221,0.06) inset, 0 0 20px rgba(185,161,221,0.05)',
-        padding: compact ? '6px 8px 4px' : '12px 14px 10px',
+        padding: compact ? '8px 10px 6px' : '12px 16px 8px',
         display: 'flex',
         flexDirection: 'column',
-        gap: compact ? 4 : 8,
+        gap: 6,
         boxSizing: 'border-box',
         fontFamily: 'var(--font-body)',
         flexShrink: 0,
       }}
     >
-      {/* top row: art + info + controls */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: compact ? 8 : 12 }}>
+      {/* top row: art | info | controls — grid gives each its own track */}
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'auto minmax(0, 1fr) auto',
+          alignItems: 'center',
+          gap: compact ? 8 : 12,
+          width: '100%',
+          minWidth: 0,
+        }}
+      >
         {/* album art */}
-        <div style={{ flexShrink: 0 }}>
+        <div style={{ flexShrink: 0, minWidth: 0 }}>
           <AlbumArt mode={mode} size={artSize} />
         </div>
 
-        {/* title + subtitle + progress */}
-        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
+        {/* title + artist — the ONLY shrinkable track */}
+        <div style={{ minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2, justifyContent: 'center' }}>
           <div
+            title={track.title}
             style={{
               fontSize: compact ? 12 : 14,
               fontWeight: 600,
               color: 'var(--text-primary)',
-              lineHeight: 1.2,
-              whiteSpace: 'nowrap',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
+              lineHeight: 1.25,
+              whiteSpace: 'normal',
+              overflowWrap: 'break-word',
+              wordBreak: 'normal',
+              minWidth: 0,
             }}
           >
             {track.title}
@@ -398,38 +411,24 @@ export const MusicPlayer = ({
               fontSize: compact ? 10 : 11.5,
               color: 'var(--text-secondary)',
               lineHeight: 1.2,
-              marginBottom: 2,
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              minWidth: 0,
             }}
           >
             {track.modeLabel} · Sage
           </div>
-
-          {/* progress bar */}
-          <ProgressBar current={currentTime} duration={duration} onSeek={seek} disabled={!musicEnabled} />
-
-          {/* times */}
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              fontSize: compact ? 9 : 10.5,
-              color: 'var(--text-secondary)',
-              opacity: 0.8,
-              marginTop: -2,
-            }}
-          >
-            <span>{formatTime(currentTime)}</span>
-            <span>{formatTime(duration)}</span>
-          </div>
         </div>
 
-        {/* control cluster */}
+        {/* control cluster — fixed track, never shrinks */}
         <div
           style={{
             display: 'flex',
             alignItems: 'center',
-            gap: compact ? 5 : 8,
+            gap: compact ? 6 : 8,
             flexShrink: 0,
+            minWidth: 0,
           }}
         >
           {/* mute */}
@@ -442,7 +441,7 @@ export const MusicPlayer = ({
               border: 'none',
               color: 'var(--text-secondary)',
               cursor: 'pointer',
-              padding: compact ? 2 : 4,
+              padding: compact ? 4 : 6,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -491,6 +490,24 @@ export const MusicPlayer = ({
           >
             {playing ? <IconPause size={compact ? 14 : 16} /> : <IconPlay size={compact ? 14 : 16} />}
           </button>
+        </div>
+      </div>
+
+      {/* bottom row: full-width progress + times */}
+      <div style={{ width: '100%', minWidth: 0, display: 'flex', flexDirection: 'column' }}>
+        <ProgressBar current={currentTime} duration={duration} onSeek={seek} disabled={!musicEnabled} />
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            fontSize: compact ? 9.5 : 10.5,
+            color: 'var(--text-secondary)',
+            opacity: 0.8,
+            marginTop: -2,
+          }}
+        >
+          <span>{formatTime(currentTime)}</span>
+          <span>{formatTime(duration)}</span>
         </div>
       </div>
 

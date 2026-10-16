@@ -89,37 +89,37 @@ body {
 /* ---- character scaling ---- */
 @media (max-height: 520px) and (orientation: landscape) {
   .sage-character {
-    --sage-char-scale: 0.78;
+    --sage-char-scale: 0.84;
   }
 }
 
 @media (max-height: 480px) and (orientation: landscape) {
   .sage-character {
-    --sage-char-scale: 0.72;
+    --sage-char-scale: 0.78;
   }
 }
 
 @media (max-height: 440px) and (orientation: landscape) {
   .sage-character {
-    --sage-char-scale: 0.66;
+    --sage-char-scale: 0.71;
   }
 }
 
 @media (max-height: 410px) and (orientation: landscape) {
   .sage-character {
-    --sage-char-scale: 0.58;
+    --sage-char-scale: 0.62;
   }
 }
 
 @media (max-height: 380px) and (orientation: landscape) {
   .sage-character {
-    --sage-char-scale: 0.5;
+    --sage-char-scale: 0.54;
   }
 }
 
 @media (max-width: 620px) and (orientation: portrait) {
   .sage-character {
-    --sage-char-scale: 0.8;
+    --sage-char-scale: 0.86;
   }
 }
 

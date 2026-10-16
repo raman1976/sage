@@ -53,9 +53,10 @@ IconButton.displayName = 'IconButton';
 interface HeaderProps {
   onSettingsClick: () => void;
   onCustomizeClick: () => void;
+  onLogoClick?: () => void;
 }
 
-export const Header = ({ onSettingsClick, onCustomizeClick }: HeaderProps) => (
+export const Header = ({ onSettingsClick, onCustomizeClick, onLogoClick }: HeaderProps) => (
   <header
     style={{
       position: 'absolute',
@@ -70,13 +71,24 @@ export const Header = ({ onSettingsClick, onCustomizeClick }: HeaderProps) => (
       pointerEvents: 'none',
     }}
   >
-    <div
+    <motion.button
+      type="button"
+      onClick={onLogoClick}
+      aria-label="Go to Home"
+      title="Go to Home"
       style={{
         display: 'flex',
         alignItems: 'center',
         gap: '8px',
         pointerEvents: 'auto',
+        background: 'transparent',
+        border: 'none',
+        padding: 0,
+        cursor: 'pointer',
+        WebkitTapHighlightColor: 'transparent',
       }}
+      whileHover={{ scale: 1.03 }}
+      whileTap={{ scale: 0.97 }}
     >
       <span
         style={{
@@ -98,7 +110,7 @@ export const Header = ({ onSettingsClick, onCustomizeClick }: HeaderProps) => (
       >
         Sage
       </span>
-    </div>
+    </motion.button>
     <div
       style={{
         display: 'flex',
