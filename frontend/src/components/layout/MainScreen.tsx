@@ -7,6 +7,8 @@ import { CompanionMode } from '../companion';
 import { FocusMode } from '../focus';
 import { PlanMode } from '../plan';
 import { Header, InputField, ModeButton } from '../ui';
+import { MusicPlayer } from '../music';
+import { useMusicPlayer } from '../../hooks/useMusicPlayer';
 import { useState, useCallback, useRef, useEffect } from 'react';
 
 interface MainScreenProps {
@@ -31,6 +33,29 @@ export const MainScreen = ({
   const [focusExpression, setFocusExpression] = useState<SageExpression | null>(null);
   const [focusTask, setFocusTask] = useState<string | null>(null);
   const overrideTimerRef = useRef<number | null>(null);
+
+  const music = useMusicPlayer(currentMode);
+
+  // Voice ducking: lower music volume when Sage speaks via speechSynthesis
+  useEffect(() => {
+    if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
+    let wasDucked = false;
+    const check = () => {
+      const speaking = window.speechSynthesis.speaking;
+      if (speaking && !wasDucked) {
+        music.duckVolume(true);
+        wasDucked = true;
+      } else if (!speaking && wasDucked) {
+        music.duckVolume(false);
+        wasDucked = false;
+      }
+    };
+    const interval = window.setInterval(check, 200);
+    return () => {
+      window.clearInterval(interval);
+      if (wasDucked) music.duckVolume(false);
+    };
+  }, [music]);
 
   const isCalm = currentMode === 'calm';
   const isCompanion = currentMode === 'companion';
@@ -167,15 +192,17 @@ export const MainScreen = ({
       }}>
         <div style={{
           flex: '0 0 auto',
-          width: 'clamp(200px, 35vw, 280px)',
+          width: 'clamp(220px, 35vw, 320px)',
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
+          gap: 'clamp(8px, 2vh, 16px)',
           minWidth: '180px',
           zIndex: 10,
         }}>
           <Character mode={currentMode} expression={effectiveExpression} size={1} />
+          <MusicPlayer {...music} />
         </div>
 
         <div style={{
