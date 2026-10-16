@@ -21,9 +21,11 @@ export interface ActivityTheme {
 export interface ModeButtonConfig {
   id: SageMode;
   label: string;
+  subtitle: string;
   icon: string;
   color: string;
   gradient: string;
+  glowColor: string;
 }
 
 export interface ApiConfig {
@@ -31,10 +33,42 @@ export interface ApiConfig {
 }
 
 export const MODE_BUTTONS: ModeButtonConfig[] = [
-  { id: 'focus', label: 'Focus', icon: '🍃', color: '#a8e6cf', gradient: 'linear-gradient(135deg, #a8e6cf 0%, #88d8a3 100%)' },
-  { id: 'companion', label: 'Companion', icon: '💜', color: '#ffb3a7', gradient: 'linear-gradient(135deg, #ffb3a7 0%, #ff9a8c 100%)' },
-  { id: 'calm', label: 'Calm', icon: '🌙', color: '#c5b4e3', gradient: 'linear-gradient(135deg, #c5b4e3 0%, #a894d1 100%)' },
-  { id: 'plan', label: 'Plan', icon: '✨', color: '#a7d0ff', gradient: 'linear-gradient(135deg, #a7d0ff 0%, #8ab8e8 100%)' },
+  {
+    id: 'focus',
+    label: 'Focus',
+    subtitle: 'Stay on track',
+    icon: '🌿',
+    color: '#a8e6cf',
+    gradient: 'linear-gradient(135deg, rgba(168,230,207,0.18) 0%, rgba(110,207,138,0.08) 100%)',
+    glowColor: 'rgba(168,230,207,0.35)',
+  },
+  {
+    id: 'companion',
+    label: 'Companion',
+    subtitle: 'Think out loud',
+    icon: '💜',
+    color: '#ffb3a7',
+    gradient: 'linear-gradient(135deg, rgba(255,179,167,0.18) 0%, rgba(255,154,140,0.08) 100%)',
+    glowColor: 'rgba(255,179,167,0.35)',
+  },
+  {
+    id: 'calm',
+    label: 'Calm',
+    subtitle: 'Feel better',
+    icon: '🌙',
+    color: '#c5b4e3',
+    gradient: 'linear-gradient(135deg, rgba(197,180,227,0.18) 0%, rgba(168,148,209,0.08) 100%)',
+    glowColor: 'rgba(197,180,227,0.35)',
+  },
+  {
+    id: 'plan',
+    label: 'Plan',
+    subtitle: 'Get started',
+    icon: '✨',
+    color: '#ffd166',
+    gradient: 'linear-gradient(135deg, rgba(255,209,102,0.18) 0%, rgba(240,180,41,0.08) 100%)',
+    glowColor: 'rgba(255,209,102,0.35)',
+  },
 ];
 
 export const CHARACTER_VARIATIONS: CharacterVariation[] = [

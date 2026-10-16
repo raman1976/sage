@@ -18,11 +18,64 @@ interface MainScreenProps {
   isConnected: boolean;
 }
 
-export const MainScreen = ({ 
-  currentMode, 
-  onModeChange, 
-  onSendMessage, 
-  isConnected 
+/* ---------------- ambient decorations (stars / hearts / sparkles) ---------- */
+
+function AmbientDecor() {
+  const reduced =
+    typeof window !== 'undefined' &&
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  const items = [
+    { top: '12%', left: '6%', size: 8, delay: 0, char: '✦', color: '#e8dff8' },
+    { top: '22%', left: '88%', size: 6, delay: 1.2, char: '✦', color: '#ffd166' },
+    { top: '65%', left: '4%', size: 7, delay: 2.1, char: '♡', color: '#ffc7d8' },
+    { top: '78%', left: '92%', size: 6, delay: 0.6, char: '✦', color: '#b9a1dd' },
+    { top: '40%', left: '2%', size: 5, delay: 1.8, char: '✧', color: '#e8dff8' },
+    { top: '15%', left: '42%', size: 5, delay: 2.5, char: '✦', color: '#b9a1dd' },
+    { top: '85%', left: '35%', size: 4, delay: 0.3, char: '✧', color: '#ffd166' },
+  ];
+
+  return (
+    <div
+      aria-hidden="true"
+      style={{
+        position: 'absolute',
+        inset: 0,
+        pointerEvents: 'none',
+        zIndex: 1,
+        overflow: 'hidden',
+      }}
+    >
+      {items.map((item, i) => (
+        <span
+          key={i}
+          className={reduced ? undefined : 'sage-decor'}
+          style={{
+            position: 'absolute',
+            top: item.top,
+            left: item.left,
+            fontSize: item.size,
+            color: item.color,
+            opacity: 0.55,
+            textShadow: `0 0 ${item.size * 2}px ${item.color}`,
+            animationDelay: `${item.delay}s`,
+            animationDuration: `${3.5 + i * 0.4}s`,
+          }}
+        >
+          {item.char}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+/* ------------------------------ main screen ------------------------------- */
+
+export const MainScreen = ({
+  currentMode,
+  onModeChange,
+  onSendMessage,
+  isConnected,
 }: MainScreenProps) => {
   const [inputValue, setInputValue] = useState('');
   const [showWelcome, setShowWelcome] = useState(true);
@@ -79,8 +132,6 @@ export const MainScreen = ({
   }, []);
 
   const handleInputChange = useCallback((value: string) => {
-    // Stay excited for as long as the user is typing (outside Calm/Companion/
-    // Plan/Focus, where Sage holds its own expressions instead).
     if (!isCalm && !isCompanion && !isPlan && !isFocus && value.trim()) {
       flashExpression('excited', 1300);
     }
@@ -147,75 +198,115 @@ export const MainScreen = ({
         maxWidth: '100dvw',
         overflow: 'hidden',
         background: 'var(--bg-main)',
-        fontFamily: 'system-ui, -apple-system, sans-serif',
+        fontFamily: 'var(--font-body)',
       }}
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.5 }}
     >
-      <div style={{
-        position: 'absolute',
-        inset: 0,
-        background: `
-          radial-gradient(ellipse 60% 50% at 15% 20%, rgba(185,161,221,0.08) 0%, transparent 60%),
-          radial-gradient(ellipse 50% 40% at 85% 25%, rgba(185,161,221,0.06) 0%, transparent 55%),
-          radial-gradient(ellipse 40% 30% at 50% 90%, rgba(185,161,221,0.04) 0%, transparent 50%)
-        `,
-        pointerEvents: 'none',
-      }} />
+      {/* ambient background gradients */}
+      <div
+        aria-hidden="true"
+        style={{
+          position: 'absolute',
+          inset: 0,
+          background: `
+            radial-gradient(ellipse 55% 45% at 12% 20%, rgba(185,161,221,0.08) 0%, transparent 60%),
+            radial-gradient(ellipse 45% 35% at 85% 25%, rgba(185,161,221,0.06) 0%, transparent 55%),
+            radial-gradient(ellipse 40% 30% at 50% 90%, rgba(185,161,221,0.04) 0%, transparent 50%),
+            radial-gradient(ellipse 30% 25% at 75% 80%, rgba(255,179,167,0.03) 0%, transparent 50%)
+          `,
+          pointerEvents: 'none',
+        }}
+      />
 
-      <div style={{
-        position: 'absolute',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        height: 'clamp(80px, 22vh, 100px)',
-        background: 'linear-gradient(180deg, transparent 0%, var(--bg-secondary) 40%, var(--bg-main) 100%)',
-        pointerEvents: 'none',
-        zIndex: 0,
-      }} />
+      {/* floating decorations */}
+      <AmbientDecor />
 
-      <Header 
+      {/* bottom gradient fade */}
+      <div
+        aria-hidden="true"
+        style={{
+          position: 'absolute',
+          bottom: 0,
+          left: 0,
+          right: 0,
+          height: 'clamp(60px, 18vh, 100px)',
+          background: 'linear-gradient(180deg, transparent 0%, var(--bg-secondary) 40%, var(--bg-main) 100%)',
+          pointerEvents: 'none',
+          zIndex: 0,
+        }}
+      />
+
+      <Header
         onSettingsClick={() => console.log('Settings clicked')}
         onCustomizeClick={() => console.log('Customize clicked')}
       />
 
-      <main style={{
-        position: 'relative',
-        display: 'flex',
-        height: '100%',
-        padding: 'clamp(16px, 3vh, 24px) clamp(16px, 4vw, 32px) clamp(20px, 4vh, 32px)',
-        boxSizing: 'border-box',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        gap: 'clamp(12px, 3vw, 24px)',
-      }}>
-        <div style={{
-          flex: '0 0 auto',
-          width: 'clamp(220px, 35vw, 320px)',
+      <main
+        style={{
+          position: 'relative',
           display: 'flex',
-          flexDirection: 'column',
+          height: '100%',
+          padding: 'calc(clamp(40px, 10vh, 56px) + var(--safe-top, 0px)) clamp(16px, 4vw, 32px) calc(clamp(12px, 3vh, 24px) + var(--safe-bottom, 0px)) calc(clamp(16px, 4vw, 32px) + var(--safe-left, 0px))',
+          boxSizing: 'border-box',
           alignItems: 'center',
-          justifyContent: 'center',
-          gap: 'clamp(8px, 2vh, 16px)',
-          minWidth: '180px',
-          zIndex: 10,
-        }}>
+          justifyContent: 'space-between',
+          gap: 'clamp(12px, 3vw, 32px)',
+          overflowY: 'auto',
+          overflowX: 'hidden',
+        }}
+      >
+        {/* ---- LEFT COLUMN: character + music player ---- */}
+        <div
+          style={{
+            flex: '0 0 auto',
+            width: 'clamp(200px, 32vw, 340px)',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 'clamp(6px, 1.5vh, 14px)',
+            minWidth: '170px',
+            zIndex: 10,
+            position: 'relative',
+          }}
+        >
+          {/* character glow platform */}
+          <div
+            aria-hidden="true"
+            style={{
+              position: 'absolute',
+              bottom: 'clamp(50px, 12vh, 80px)',
+              left: '50%',
+              transform: 'translateX(-50%)',
+              width: 'clamp(140px, 60%, 220px)',
+              height: 'clamp(30px, 8vh, 50px)',
+              borderRadius: '50%',
+              background: 'radial-gradient(ellipse, rgba(185,161,221,0.15) 0%, transparent 70%)',
+              filter: 'blur(8px)',
+              pointerEvents: 'none',
+            }}
+          />
           <Character mode={currentMode} expression={effectiveExpression} size={1} />
           <MusicPlayer {...music} />
         </div>
 
-        <div style={{
-          flex: 1,
-          maxWidth: '480px',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'flex-start',
-          justifyContent: 'center',
-          gap: 'clamp(16px, 3vh, 22px)',
-          minWidth: 0,
-          width: '100%',
-        }}>
+        {/* ---- RIGHT COLUMN: welcome + input + mode grid ---- */}
+        <div
+          style={{
+            flex: 1,
+            maxWidth: 'clamp(320px, 42vw, 480px)',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'flex-start',
+            justifyContent: 'center',
+            gap: 'clamp(10px, 2.5vh, 20px)',
+            minWidth: 0,
+            width: '100%',
+            zIndex: 10,
+          }}
+        >
           {isCalm ? (
             <CalmMode onExit={handleCalmExit} onExpressionChange={setCalmExpression} />
           ) : isCompanion ? (
@@ -230,62 +321,67 @@ export const MainScreen = ({
               onConsumeInitialTask={handleConsumeFocusTask}
             />
           ) : (
-          <>
-          {showWelcome && (
-            <motion.div
-              initial={{ opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.2, ease: 'easeOut' }}
-              style={{ width: '100%' }}
-            >
-              <h1 style={{
-                margin: 0,
-                fontSize: 'clamp(24px, 5vw, 32px)',
-                fontWeight: 700,
-                color: 'var(--text-primary)',
-                lineHeight: 1.2,
-                letterSpacing: '-0.3px',
-              }}>
-                Hi, I&apos;m Sage!
-              </h1>
-              <p style={{
-                margin: 'clamp(8px, 2vh, 12px) 0 0',
-                fontSize: 'clamp(14px, 3vw, 16px)',
-                color: 'var(--text-secondary)',
-                lineHeight: 1.4,
-              }}>
-                Ready to make today a little brighter? 🌱
-              </p>
-            </motion.div>
+            <>
+              {showWelcome && (
+                <motion.div
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: 0.2, ease: 'easeOut' }}
+                  style={{ width: '100%' }}
+                >
+                  <h1
+                    style={{
+                      margin: 0,
+                      fontSize: 'clamp(22px, 5vw, 36px)',
+                      fontWeight: 700,
+                      fontFamily: 'var(--font-display)',
+                      color: 'var(--text-primary)',
+                      lineHeight: 1.15,
+                      letterSpacing: '-0.3px',
+                    }}
+                  >
+                    Hi, I&apos;m <span style={{ color: 'var(--accent-primary)' }}>Sage</span>!
+                  </h1>
+                  <p
+                    style={{
+                      margin: 'clamp(4px, 1.5vh, 10px) 0 0',
+                      fontSize: 'clamp(13px, 3vw, 16px)',
+                      color: 'var(--text-secondary)',
+                      lineHeight: 1.4,
+                    }}
+                  >
+                    Ready to make today a little brighter? 🌱
+                  </p>
+                </motion.div>
+              )}
+
+              <motion.div
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, delay: showWelcome ? 0.35 : 0.15 }}
+                style={{ width: '100%' }}
+              >
+                <InputField
+                  value={inputValue}
+                  onChange={handleInputChange}
+                  onSubmit={handleSubmit}
+                  placeholder="Tell me what's on your mind..."
+                  autoFocus={!showWelcome}
+                />
+              </motion.div>
+            </>
           )}
 
+          {/* ---- 2×2 mode grid ---- */}
           <motion.div
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4, delay: showWelcome ? 0.35 : 0.15 }}
-            style={{ width: '100%' }}
-          >
-            <InputField
-              value={inputValue}
-              onChange={handleInputChange}
-              onSubmit={handleSubmit}
-              placeholder="Tell me what&apos;s on your mind..."
-              autoFocus={!showWelcome}
-            />
-          </motion.div>
-          </>
-          )}
-
-          <motion.div
-            initial={{ opacity: 0, y: 16 }}
+            initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4, delay: showWelcome ? 0.5 : 0.25 }}
-            style={{ 
-              display: 'flex', 
-              gap: 'clamp(10px, 2.5vw, 14px)', 
-              flexWrap: 'wrap',
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(2, 1fr)',
+              gap: 'clamp(8px, 2vw, 12px)',
               width: '100%',
-              justifyContent: 'flex-start',
             }}
           >
             {MODE_BUTTONS.map((btn) => (
@@ -303,10 +399,10 @@ export const MainScreen = ({
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               style={{
-                margin: 'clamp(8px, 1.5vh, 12px) 0 0',
-                fontSize: 'clamp(11px, 2.5vw, 13px)',
+                margin: 0,
+                fontSize: 'clamp(10px, 2.5vw, 12px)',
                 color: 'var(--text-secondary)',
-                opacity: 0.6,
+                opacity: 0.5,
               }}
             >
               Connecting to Sage...
@@ -315,16 +411,17 @@ export const MainScreen = ({
         </div>
       </main>
 
+      {/* connection dot */}
       <motion.div
         style={{
           position: 'fixed',
-          bottom: 'clamp(12px, 3vh, 20px)',
-          right: 'clamp(12px, 3vw, 20px)',
-          width: '10px',
-          height: '10px',
+          bottom: 'calc(clamp(10px, 2.5vh, 16px) + var(--safe-bottom, 0px))',
+          right: 'calc(clamp(10px, 3vw, 16px) + var(--safe-right, 0px))',
+          width: '8px',
+          height: '8px',
           borderRadius: '50%',
-          background: isConnected ? 'var(--color-mint)' : 'var(--color-peach-ui)',
-          boxShadow: `0 0 10px ${isConnected ? 'var(--color-mint)' : 'var(--color-peach-ui)'}`,
+          background: isConnected ? 'var(--sage-sprout)' : 'var(--mode-companion)',
+          boxShadow: `0 0 8px ${isConnected ? 'var(--sage-sprout)' : 'var(--mode-companion)'}`,
           zIndex: 20,
         }}
         animate={{

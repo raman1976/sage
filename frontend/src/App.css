@@ -4,7 +4,9 @@
   box-sizing: border-box;
 }
 
-html, body, #root {
+html,
+body,
+#root {
   width: 100%;
   width: 100dvw;
   height: 100%;
@@ -20,12 +22,14 @@ body {
   text-rendering: optimizeLegibility;
   background: var(--bg-main);
   color: var(--text-primary);
+  font-family: var(--font-body);
 }
 
 #root {
   isolation: isolate;
 }
 
+/* ---- character ---- */
 .sage-character {
   will-change: transform;
 }
@@ -58,17 +62,21 @@ body {
     animation: none !important;
     transition: none !important;
   }
+  .sage-decor {
+    animation: none !important;
+  }
 }
 
+/* ---- character scaling ---- */
 @media (max-height: 450px) and (orientation: landscape) {
   .sage-character {
-    --sage-char-scale: 0.85;
+    --sage-char-scale: 0.8;
   }
 }
 
 @media (max-height: 380px) and (orientation: landscape) {
   .sage-character {
-    --sage-char-scale: 0.72;
+    --sage-char-scale: 0.65;
   }
 }
 
@@ -78,6 +86,14 @@ body {
   }
 }
 
+/* ---- iPhone 16 Pro landscape fine-tuning ---- */
+@media (max-height: 410px) and (orientation: landscape) {
+  .sage-character {
+    --sage-char-scale: 0.7;
+  }
+}
+
+/* ---- form elements ---- */
 input::placeholder {
   color: var(--text-secondary);
   opacity: 0.6;
@@ -90,6 +106,7 @@ input:focus-visible {
 button:focus-visible {
   outline: 2px solid var(--accent-primary);
   outline-offset: 2px;
+  border-radius: var(--radius-sm);
 }
 
 ::selection {
@@ -97,19 +114,54 @@ button:focus-visible {
   color: var(--bg-main);
 }
 
+/* ---- keyframes ---- */
 @keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
 }
 
 @keyframes float {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-4px); }
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
 }
 
+/* ---- safe area utilities ---- */
 @supports (padding: max(0px)) {
-  .safe-padding-top { padding-top: max(16px, env(safe-area-inset-top)); }
-  .safe-padding-bottom { padding-bottom: max(16px, env(safe-area-inset-bottom)); }
-  .safe-padding-left { padding-left: max(16px, env(safe-area-inset-left)); }
-  .safe-padding-right { padding-right: max(16px, env(safe-area-inset-right)); }
+  .safe-padding-top {
+    padding-top: max(16px, env(safe-area-inset-top));
+  }
+  .safe-padding-bottom {
+    padding-bottom: max(16px, env(safe-area-inset-bottom));
+  }
+  .safe-padding-left {
+    padding-left: max(16px, env(safe-area-inset-left));
+  }
+  .safe-padding-right {
+    padding-right: max(16px, env(safe-area-inset-right));
+  }
+}
+
+/* ---- scrollbars (webkit) ---- */
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 2px;
 }

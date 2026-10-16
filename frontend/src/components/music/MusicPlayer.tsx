@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { motion } from 'motion/react';
 import { formatTime, type MusicPlayerState, type MusicPlayerActions } from '../../hooks/useMusicPlayer';
 
@@ -38,7 +38,7 @@ const IconVolume = ({ muted, size = 16 }: { muted: boolean; size?: number }) => 
 
 /* --------------------------- album art (CSS) ----------------------------- */
 
-const AlbumArt = ({ mode }: { mode: string }) => {
+const AlbumArt = ({ mode, size = 64 }: { mode: string; size?: number }) => {
   const gradients: Record<string, string> = {
     idle: 'linear-gradient(135deg, #2a1f3d 0%, #4a3570 40%, #8b6cc1 100%)',
     calm: 'linear-gradient(135deg, #1a1530 0%, #2d2250 35%, #6b52a8 75%, #a88bdd 100%)',
@@ -49,9 +49,9 @@ const AlbumArt = ({ mode }: { mode: string }) => {
   return (
     <div
       style={{
-        width: 64,
-        height: 64,
-        borderRadius: 14,
+        width: size,
+        height: size,
+        borderRadius: size * 0.22,
         background: gradients[mode] ?? gradients.idle,
         flexShrink: 0,
         position: 'relative',
@@ -65,38 +65,38 @@ const AlbumArt = ({ mode }: { mode: string }) => {
       <div
         style={{
           position: 'absolute',
-          top: 10,
-          right: 12,
-          width: 22,
-          height: 22,
+          top: size * 0.15,
+          right: size * 0.18,
+          width: size * 0.34,
+          height: size * 0.34,
           borderRadius: '50%',
           background: '#e8dff8',
-          boxShadow: '0 0 12px rgba(232,223,248,0.6), 0 0 24px rgba(232,223,248,0.3)',
+          boxShadow: `0 0 ${size * 0.18}px rgba(232,223,248,0.6), 0 0 ${size * 0.36}px rgba(232,223,248,0.3)`,
         }}
       />
       {/* moon shadow crescent */}
       <div
         style={{
           position: 'absolute',
-          top: 8,
-          right: 10,
-          width: 22,
-          height: 22,
+          top: size * 0.12,
+          right: size * 0.15,
+          width: size * 0.34,
+          height: size * 0.34,
           borderRadius: '50%',
           background: gradients[mode] ?? gradients.idle,
-          transform: 'translate(6px, -3px)',
+          transform: `translate(${size * 0.09}px, ${-size * 0.05}px)`,
         }}
       />
       {/* cloud bottom */}
       <div
         style={{
           position: 'absolute',
-          bottom: 8,
+          bottom: size * 0.12,
           left: '50%',
           transform: 'translateX(-50%)',
-          width: 44,
-          height: 16,
-          borderRadius: '16px 16px 8px 8px',
+          width: size * 0.68,
+          height: size * 0.25,
+          borderRadius: `${size * 0.25}px ${size * 0.25}px ${size * 0.12}px ${size * 0.12}px`,
           background: 'rgba(185,161,221,0.35)',
           filter: 'blur(1px)',
         }}
@@ -104,20 +104,20 @@ const AlbumArt = ({ mode }: { mode: string }) => {
       <div
         style={{
           position: 'absolute',
-          bottom: 5,
+          bottom: size * 0.07,
           left: '50%',
           transform: 'translateX(-50%)',
-          width: 52,
-          height: 14,
-          borderRadius: '14px 14px 6px 6px',
+          width: size * 0.81,
+          height: size * 0.22,
+          borderRadius: `${size * 0.22}px ${size * 0.22}px ${size * 0.09}px ${size * 0.09}px`,
           background: 'rgba(185,161,221,0.18)',
           filter: 'blur(2px)',
         }}
       />
       {/* sparkles */}
-      <div style={{ position: 'absolute', top: 8, left: 10, width: 3, height: 3, borderRadius: '50%', background: '#e8dff8', opacity: 0.8 }} />
-      <div style={{ position: 'absolute', top: 18, left: 6, width: 2, height: 2, borderRadius: '50%', background: '#e8dff8', opacity: 0.5 }} />
-      <div style={{ position: 'absolute', top: 5, left: 22, width: 2, height: 2, borderRadius: '50%', background: '#ffd166', opacity: 0.7 }} />
+      <div style={{ position: 'absolute', top: size * 0.12, left: size * 0.16, width: 3, height: 3, borderRadius: '50%', background: '#e8dff8', opacity: 0.8 }} />
+      <div style={{ position: 'absolute', top: size * 0.28, left: size * 0.09, width: 2, height: 2, borderRadius: '50%', background: '#e8dff8', opacity: 0.5 }} />
+      <div style={{ position: 'absolute', top: size * 0.08, left: size * 0.34, width: 2, height: 2, borderRadius: '50%', background: '#ffd166', opacity: 0.7 }} />
     </div>
   );
 };
@@ -206,7 +206,7 @@ function ProgressBar({
             width: `${fraction * 100}%`,
             height: '100%',
             borderRadius: 2,
-            background: 'linear-gradient(90deg, #8f7ad6, #B9A1DD)',
+            background: 'linear-gradient(90deg, var(--sage-hood-dark), var(--accent-primary))',
             transition: dragging ? 'none' : 'width 0.15s linear',
           }}
         />
@@ -219,7 +219,7 @@ function ProgressBar({
           width: 10,
           height: 10,
           borderRadius: '50%',
-          background: '#B9A1DD',
+          background: 'var(--accent-primary)',
           boxShadow: '0 0 6px rgba(185,161,221,0.5)',
           transition: dragging ? 'none' : 'left 0.15s linear',
           pointerEvents: 'none',
@@ -290,7 +290,7 @@ function VolumeSlider({
             width: `${effective * 100}%`,
             height: '100%',
             borderRadius: 2,
-            background: 'linear-gradient(90deg, #8f7ad6, #B9A1DD)',
+            background: 'linear-gradient(90deg, var(--sage-hood-dark), var(--accent-primary))',
             transition: dragging ? 'none' : 'width 0.15s linear',
           }}
         />
@@ -302,7 +302,7 @@ function VolumeSlider({
           width: 8,
           height: 8,
           borderRadius: '50%',
-          background: '#B9A1DD',
+          background: 'var(--accent-primary)',
           boxShadow: '0 0 4px rgba(185,161,221,0.5)',
           transition: dragging ? 'none' : 'left 0.15s linear',
           pointerEvents: 'none',
@@ -333,6 +333,19 @@ export const MusicPlayer = ({
     typeof window !== 'undefined' &&
     window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
+  // Detect compact landscape (iPhone 16 Pro ~402px height)
+  const [compact, setCompact] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia('(max-height: 420px) and (orientation: landscape)');
+    const update = () => setCompact(mq.matches);
+    update();
+    mq.addEventListener('change', update);
+    return () => mq.removeEventListener('change', update);
+  }, []);
+
+  const artSize = compact ? 44 : 64;
+  const btnSize = compact ? 34 : 40;
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 12 }}
@@ -342,33 +355,35 @@ export const MusicPlayer = ({
       aria-label="Music player"
       style={{
         width: '100%',
-        maxWidth: 380,
+        maxWidth: compact ? 280 : 380,
         background: 'rgba(48, 43, 58, 0.55)',
         backdropFilter: 'blur(16px)',
         WebkitBackdropFilter: 'blur(16px)',
-        borderRadius: 20,
+        borderRadius: compact ? 14 : 20,
         border: '1px solid rgba(185,161,221,0.14)',
         boxShadow: '0 8px 32px rgba(0,0,0,0.35), 0 0 0 1px rgba(185,161,221,0.06) inset, 0 0 20px rgba(185,161,221,0.05)',
-        padding: '14px 16px 12px',
+        padding: compact ? '8px 10px 6px' : '14px 16px 12px',
         display: 'flex',
         flexDirection: 'column',
-        gap: 10,
+        gap: compact ? 6 : 10,
         boxSizing: 'border-box',
-        fontFamily: 'system-ui, -apple-system, sans-serif',
+        fontFamily: 'var(--font-body)',
       }}
     >
       {/* top row: art + info + controls */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: compact ? 8 : 12 }}>
         {/* album art */}
-        <AlbumArt mode={mode} />
+        <div style={{ flexShrink: 0 }}>
+          <AlbumArt mode={mode} size={artSize} />
+        </div>
 
         {/* title + subtitle + progress */}
         <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
           <div
             style={{
-              fontSize: 14,
+              fontSize: compact ? 12 : 14,
               fontWeight: 600,
-              color: 'var(--text-primary, #F6EBDC)',
+              color: 'var(--text-primary)',
               lineHeight: 1.2,
               whiteSpace: 'nowrap',
               overflow: 'hidden',
@@ -379,8 +394,8 @@ export const MusicPlayer = ({
           </div>
           <div
             style={{
-              fontSize: 11.5,
-              color: 'var(--text-secondary, #ADA6B8)',
+              fontSize: compact ? 10 : 11.5,
+              color: 'var(--text-secondary)',
               lineHeight: 1.2,
               marginBottom: 2,
             }}
@@ -396,8 +411,8 @@ export const MusicPlayer = ({
             style={{
               display: 'flex',
               justifyContent: 'space-between',
-              fontSize: 10.5,
-              color: 'var(--text-secondary, #ADA6B8)',
+              fontSize: compact ? 9 : 10.5,
+              color: 'var(--text-secondary)',
               opacity: 0.8,
               marginTop: -2,
             }}
@@ -412,7 +427,7 @@ export const MusicPlayer = ({
           style={{
             display: 'flex',
             alignItems: 'center',
-            gap: 8,
+            gap: compact ? 5 : 8,
             flexShrink: 0,
           }}
         >
@@ -424,9 +439,9 @@ export const MusicPlayer = ({
             style={{
               background: 'none',
               border: 'none',
-              color: 'var(--text-secondary, #ADA6B8)',
+              color: 'var(--text-secondary)',
               cursor: 'pointer',
-              padding: 4,
+              padding: compact ? 2 : 4,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -434,13 +449,13 @@ export const MusicPlayer = ({
               borderRadius: 6,
             }}
             onMouseEnter={(e) => { e.currentTarget.style.color = '#B9A1DD'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-secondary, #ADA6B8)'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-secondary)'; }}
           >
-            <IconVolume muted={muted} />
+            <IconVolume muted={muted} size={compact ? 14 : 16} />
           </button>
 
-          {/* volume slider */}
-          <VolumeSlider volume={volume} muted={muted} onChange={setVolume} />
+          {/* volume slider — hidden on very compact screens to save space */}
+          {!compact && <VolumeSlider volume={volume} muted={muted} onChange={setVolume} />}
 
           {/* play / pause — prominent circular button */}
           <button
@@ -448,8 +463,8 @@ export const MusicPlayer = ({
             onClick={togglePlay}
             aria-label={playing ? 'Pause' : 'Play'}
             style={{
-              width: 40,
-              height: 40,
+              width: btnSize,
+              height: btnSize,
               borderRadius: '50%',
               border: 'none',
               background: playing
@@ -473,7 +488,7 @@ export const MusicPlayer = ({
               e.currentTarget.style.boxShadow = '0 2px 12px rgba(143,122,214,0.4)';
             }}
           >
-            {playing ? <IconPause size={16} /> : <IconPlay size={16} />}
+            {playing ? <IconPause size={compact ? 14 : 16} /> : <IconPlay size={compact ? 14 : 16} />}
           </button>
         </div>
       </div>

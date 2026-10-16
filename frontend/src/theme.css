@@ -1,11 +1,22 @@
 :root {
+  /* --- dark theme (always applied) --- */
+  --bg-main: #17151f;
+  --bg-secondary: #242130;
+  --bg-card: #2e2938;
+  --accent-primary: #b9a1dd;
+  --accent-secondary: #c5b4e3;
+  --text-primary: #f6ebdc;
+  --text-secondary: #ada6b8;
+  --border-color: rgba(185, 161, 221, 0.16);
+  --shadow-color: rgba(0, 0, 0, 0.4);
+  --shadow-color-strong: rgba(0, 0, 0, 0.55);
+  --accent-glow: rgba(185, 161, 221, 0.22);
+
+  /* --- legacy character outfit palette (used by CharacterParts/FaceParts) --- */
   --color-cream: #fdf2e8;
   --color-cream-dark: #f5e6d8;
   --color-peach: #ffdab9;
   --color-peach-dark: #ffc8a0;
-  --color-lavender: #c5b4e3;
-  --color-lavender-dark: #a894d1;
-  --color-lavender-light: #e8dff8;
   --color-brown: #4a3728;
   --color-brown-light: #6b4f3a;
   --color-pink: #ffb3c6;
@@ -17,6 +28,7 @@
   --color-white: #ffffff;
   --color-black: #2d2d2d;
 
+  /* --- legacy UI aliases (used by some components) --- */
   --color-mint: #a8e6cf;
   --color-mint-dark: #88d8a3;
   --color-peach-ui: #ffb3a7;
@@ -26,82 +38,61 @@
   --color-sky: #a7d0ff;
   --color-sky-dark: #8ab8e8;
   --color-white-translucent: rgba(255, 255, 255, 0.9);
-  --text-primary: #4a3728;
-  --text-secondary: #6b4f3a;
-  --shadow-color: rgba(74, 55, 40, 0.15);
-  --shadow-color-strong: rgba(74, 55, 40, 0.25);
 
+  /* --- sage character palette (kept for SVG rendering) --- */
+  --sage-face: #f6ebdc;
+  --sage-face-hi: #fdf5ea;
+  --sage-face-shade: #ead9c2;
+  --sage-hood: #b9a1dd;
+  --sage-hood-hi: #cbb9e8;
+  --sage-hood-dark: #8f7ad6;
+  --sage-cat-ear: #a78ed2;
+  --sage-eye: #4b3a2e;
+  --sage-eye-hi: #6a5243;
+  --sage-eye-deep: #31241b;
+  --sage-blush: #ffc7d8;
+  --sage-sprout: #8fe3a1;
+  --sage-sprout-dark: #6ecf8a;
+  --sage-star: #ffd166;
+
+  /* --- mode accents --- */
+  --mode-focus: #a8e6cf;
+  --mode-focus-dark: #6ecf8a;
+  --mode-companion: #ffb3a7;
+  --mode-companion-dark: #ff9a8c;
+  --mode-calm: #c5b4e3;
+  --mode-calm-dark: #a894d1;
+  --mode-plan: #ffd166;
+  --mode-plan-dark: #f0b429;
+
+  /* --- fonts --- */
+  --font-display: 'Fraunces', 'Georgia', 'Times New Roman', serif;
+  --font-body: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+
+  /* --- spacing --- */
   --spacing-xs: 4px;
   --spacing-sm: 8px;
   --spacing-md: 16px;
   --spacing-lg: 24px;
   --spacing-xl: 32px;
-  --spacing-xxl: 48px;
 
+  /* --- radius --- */
   --radius-sm: 8px;
   --radius-md: 16px;
   --radius-lg: 24px;
   --radius-xl: 32px;
   --radius-full: 9999px;
 
-  --shadow-soft: 0 4px 12px var(--shadow-color), 0 2px 4px var(--shadow-color);
-  --shadow-medium: 0 8px 24px var(--shadow-color), 0 4px 8px var(--shadow-color);
-  --shadow-strong: 0 16px 48px var(--shadow-color-strong), 0 8px 16px var(--shadow-color-strong);
-  --shadow-inner: inset 0 2px 4px var(--shadow-color);
+  /* --- safe areas (iPhone) --- */
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
 
-  --transition-fast: 150ms ease-out;
-  --transition-normal: 250ms ease-out;
-  --transition-slow: 400ms ease-out;
-
+  /* --- z-index --- */
   --z-base: 0;
   --z-character: 10;
   --z-ui: 20;
   --z-modal: 30;
   --z-toast: 40;
-
-  --bg-main: #17171D;
-  --bg-secondary: #24222C;
-  --bg-card: #302B3A;
-  --accent-primary: #B9A1DD;
-  --text-primary: #F6EBDC;
-  --text-secondary: #ADA6B8;
-  --border-color: rgba(185, 161, 221, 0.18);
-  --shadow-color: rgba(0, 0, 0, 0.35);
-  --shadow-color-strong: rgba(0, 0, 0, 0.5);
-  --accent-glow: rgba(185, 161, 221, 0.25);
-
-  --sage-face: #F6EBDC;
-  --sage-face-hi: #FDF5EA;
-  --sage-face-shade: #EAD9C2;
-  --sage-hood: #B9A1DD;
-  --sage-hood-hi: #CBB9E8;
-  --sage-hood-dark: #8F7AD6;
-  --sage-cat-ear: #A78ED2;
-  --sage-eye: #4B3A2E;
-  --sage-eye-hi: #6A5243;
-  --sage-eye-deep: #31241B;
-  --sage-blush: #FFC7D8;
-  --sage-sprout: #8FE3A1;
-  --sage-sprout-dark: #6ECF8A;
-  --sage-star: #FFD166;
-
-  --safe-top: env(safe-area-inset-top, 0px);
-  --safe-bottom: env(safe-area-inset-bottom, 0px);
-  --safe-left: env(safe-area-inset-left, 0px);
-  --safe-right: env(safe-area-inset-right, 0px);
-}
-
-@media (prefers-color-scheme: light) {
-  :root {
-    --bg-main: #17171D;
-    --bg-secondary: #24222C;
-    --bg-card: #302B3A;
-    --accent-primary: #B9A1DD;
-    --text-primary: #F6EBDC;
-    --text-secondary: #ADA6B8;
-    --border-color: rgba(185, 161, 221, 0.18);
-    --shadow-color: rgba(0, 0, 0, 0.35);
-    --shadow-color-strong: rgba(0, 0, 0, 0.5);
-    --accent-glow: rgba(185, 161, 221, 0.25);
-  }
 }
