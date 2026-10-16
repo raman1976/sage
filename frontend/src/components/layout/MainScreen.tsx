@@ -258,29 +258,30 @@ export const MainScreen = ({
           position: 'relative',
           display: 'flex',
           height: '100%',
-          padding: 'calc(clamp(40px, 10vh, 56px) + var(--safe-top, 0px)) clamp(16px, 4vw, 32px) calc(clamp(12px, 3vh, 24px) + var(--safe-bottom, 0px)) calc(clamp(16px, 4vw, 32px) + var(--safe-left, 0px))',
+          padding: 'calc(clamp(24px, 5vh, 40px) + var(--safe-top, 0px)) clamp(8px, 2vw, 24px) calc(clamp(4px, 1.5vh, 12px) + var(--safe-bottom, 0px)) calc(clamp(6px, 2vw, 16px) + var(--safe-left, 0px))',
           boxSizing: 'border-box',
-          alignItems: 'center',
+          alignItems: 'stretch',
           justifyContent: 'space-between',
-          gap: 'clamp(12px, 3vw, 32px)',
-          overflowY: 'auto',
-          overflowX: 'hidden',
+          gap: 'clamp(4px, 1vw, 16px)',
+          overflow: 'hidden',
         }}
       >
         {/* ---- LEFT COLUMN: character + music player ---- */}
         <div
           style={{
             flex: '0 0 auto',
-            width: 'clamp(200px, 32vw, 340px)',
+            width: 'clamp(130px, 22vw, 280px)',
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
             justifyContent: 'center',
-            gap: 'clamp(6px, 1.5vh, 14px)',
-            minWidth: '170px',
-            marginLeft: 'clamp(24px, 5vw, 60px)',
+            gap: 'clamp(2px, 0.8vh, 10px)',
+            minWidth: '120px',
+            marginLeft: 'clamp(4px, 2vw, 36px)',
             zIndex: 10,
             position: 'relative',
+            overflow: 'hidden',
+            minHeight: 0,
           }}
         >
           {/* character glow platform */}
@@ -288,14 +289,14 @@ export const MainScreen = ({
             aria-hidden="true"
             style={{
               position: 'absolute',
-              bottom: 'clamp(50px, 12vh, 80px)',
+              bottom: 'clamp(30px, 8vh, 56px)',
               left: '50%',
               transform: 'translateX(-50%)',
-              width: 'clamp(140px, 60%, 220px)',
-              height: 'clamp(30px, 8vh, 50px)',
+              width: 'clamp(100px, 50%, 180px)',
+              height: 'clamp(18px, 6vh, 36px)',
               borderRadius: '50%',
-              background: 'radial-gradient(ellipse, rgba(185,161,221,0.15) 0%, transparent 70%)',
-              filter: 'blur(8px)',
+              background: 'radial-gradient(ellipse, rgba(185,161,221,0.12) 0%, transparent 70%)',
+              filter: 'blur(6px)',
               pointerEvents: 'none',
             }}
           />
@@ -307,14 +308,17 @@ export const MainScreen = ({
         <div
           style={{
             flex: 1,
-            maxWidth: 'clamp(320px, 42vw, 480px)',
+            maxWidth: 'clamp(260px, 38vw, 440px)',
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'flex-start',
             justifyContent: 'center',
-            gap: 'clamp(10px, 2.5vh, 20px)',
+            gap: 'clamp(5px, 1.2vh, 14px)',
             minWidth: 0,
             width: '100%',
+            maxHeight: '100%',
+            minHeight: 0,
+            overflow: 'hidden',
             zIndex: 10,
           }}
         >
@@ -370,7 +374,7 @@ export const MainScreen = ({
             />
           ) : (
             <>
-              {showWelcome && (
+{showWelcome && (
                 <motion.div
                   initial={{ opacity: 0, y: 12 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -380,7 +384,7 @@ export const MainScreen = ({
                   <h1
                     style={{
                       margin: 0,
-                      fontSize: 'clamp(22px, 5vw, 36px)',
+                      fontSize: 'clamp(18px, 4.5vw, 30px)',
                       fontWeight: 700,
                       fontFamily: 'var(--font-display)',
                       color: 'var(--text-primary)',
@@ -392,8 +396,8 @@ export const MainScreen = ({
                   </h1>
                   <p
                     style={{
-                      margin: 'clamp(4px, 1.5vh, 10px) 0 0',
-                      fontSize: 'clamp(13px, 3vw, 16px)',
+                      margin: 'clamp(3px, 1.2vh, 8px) 0 0',
+                      fontSize: 'clamp(11px, 2.5vw, 14px)',
                       color: 'var(--text-secondary)',
                       lineHeight: 1.4,
                     }}
@@ -402,7 +406,7 @@ export const MainScreen = ({
                   </p>
                 </motion.div>
               )}
-
+ 
               <motion.div
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -417,7 +421,7 @@ export const MainScreen = ({
                   autoFocus={!showWelcome}
                 />
               </motion.div>
-
+ 
               {/* ---- 2×2 mode grid (Home only) ---- */}
               <motion.div
                 initial={{ opacity: 0, y: 12 }}
@@ -426,7 +430,7 @@ export const MainScreen = ({
                 style={{
                   display: 'grid',
                   gridTemplateColumns: 'repeat(2, 1fr)',
-                  gap: 'clamp(8px, 2vw, 12px)',
+                  gap: 'clamp(6px, 1.5vw, 10px)',
                   width: '100%',
                 }}
               >

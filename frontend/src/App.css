@@ -4,16 +4,35 @@
   box-sizing: border-box;
 }
 
+/* viewport sizing with Safari dynamic UI handling */
+:root {
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+}
+
 html,
 body,
 #root {
   width: 100%;
+  width: 100vw;
   width: 100dvw;
   height: 100%;
+  height: 100vh;
   height: 100dvh;
   margin: 0;
   padding: 0;
   overflow: hidden;
+  overscroll-behavior: none;
+  touch-action: manipulation;
+}
+
+/* prevent Safari rubber-band scrolling */
+@supports (overscroll-behavior: none) {
+  html, body, #root {
+    overscroll-behavior: none;
+  }
 }
 
 body {
@@ -68,28 +87,39 @@ body {
 }
 
 /* ---- character scaling ---- */
-@media (max-height: 450px) and (orientation: landscape) {
+@media (max-height: 520px) and (orientation: landscape) {
   .sage-character {
-    --sage-char-scale: 0.8;
+    --sage-char-scale: 0.78;
+  }
+}
+
+@media (max-height: 480px) and (orientation: landscape) {
+  .sage-character {
+    --sage-char-scale: 0.72;
+  }
+}
+
+@media (max-height: 440px) and (orientation: landscape) {
+  .sage-character {
+    --sage-char-scale: 0.66;
+  }
+}
+
+@media (max-height: 410px) and (orientation: landscape) {
+  .sage-character {
+    --sage-char-scale: 0.58;
   }
 }
 
 @media (max-height: 380px) and (orientation: landscape) {
   .sage-character {
-    --sage-char-scale: 0.65;
+    --sage-char-scale: 0.5;
   }
 }
 
 @media (max-width: 620px) and (orientation: portrait) {
   .sage-character {
     --sage-char-scale: 0.8;
-  }
-}
-
-/* ---- iPhone 16 Pro landscape fine-tuning ---- */
-@media (max-height: 410px) and (orientation: landscape) {
-  .sage-character {
-    --sage-char-scale: 0.7;
   }
 }
 

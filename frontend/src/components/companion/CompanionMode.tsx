@@ -19,9 +19,10 @@ interface Msg {
 const card: React.CSSProperties = {
   background: 'rgba(255,255,255,0.04)',
   border: '1px solid var(--border-color)',
-  borderRadius: 'clamp(14px, 3vw, 20px)',
-  padding: 'clamp(10px, 2.4vh, 14px) clamp(12px, 3vw, 16px)',
+  borderRadius: 'clamp(10px, 2.5vw, 18px)',
+  padding: 'clamp(6px, 1.5vh, 12px) clamp(10px, 2.5vw, 14px)',
   boxSizing: 'border-box',
+  flexShrink: 0,
 };
 
 const pill: React.CSSProperties = {
@@ -29,12 +30,13 @@ const pill: React.CSSProperties = {
   borderRadius: '9999px',
   background: 'rgba(255,255,255,0.05)',
   color: 'var(--text-primary)',
-  fontSize: 'clamp(12px, 2.8vw, 14px)',
+  fontSize: 'clamp(11px, 2.4vw, 13px)',
   fontWeight: 600,
   fontFamily: 'system-ui, sans-serif',
-  padding: 'clamp(8px, 2vh, 10px) clamp(14px, 3vw, 18px)',
+  padding: 'clamp(5px, 1.2vh, 8px) clamp(10px, 2.4vw, 16px)',
   cursor: 'pointer',
   userSelect: 'none',
+  flexShrink: 0,
 };
 
 const primaryPill: React.CSSProperties = {
@@ -46,23 +48,23 @@ const primaryPill: React.CSSProperties = {
 
 const smallText: React.CSSProperties = {
   margin: 0,
-  fontSize: 'clamp(12px, 2.8vw, 14px)',
+  fontSize: 'clamp(11px, 2.4vw, 13px)',
   color: 'var(--text-secondary)',
-  lineHeight: 1.45,
+  lineHeight: 1.4,
   fontFamily: 'system-ui, sans-serif',
 };
 
 const sageText: React.CSSProperties = {
   margin: 0,
-  fontSize: 'clamp(14px, 3.2vw, 16px)',
+  fontSize: 'clamp(12px, 2.8vw, 15px)',
   color: 'var(--text-primary)',
-  lineHeight: 1.5,
+  lineHeight: 1.4,
   fontFamily: 'system-ui, sans-serif',
 };
 
 const rowStyle: React.CSSProperties = {
   display: 'flex',
-  gap: 8,
+  gap: 6,
   flexWrap: 'wrap',
   alignItems: 'center',
 };
@@ -131,12 +133,12 @@ function ChatLog({ messages, busy, busyText }: { messages: Msg[]; busy: boolean;
       style={{
         ...card,
         flex: '1 1 auto',
-        minHeight: 90,
-        maxHeight: 'clamp(140px, 34vh, 260px)',
+        minHeight: 80,
+        maxHeight: 'clamp(100px, 28vh, 260px)',
         overflowY: 'auto',
         display: 'flex',
         flexDirection: 'column',
-        gap: 8,
+        gap: 6,
       }}
       role="log"
       aria-live="polite"
@@ -149,11 +151,11 @@ function ChatLog({ messages, busy, busyText }: { messages: Msg[]; busy: boolean;
             maxWidth: '88%',
             background: m.role === 'user' ? 'rgba(185,161,221,0.14)' : 'rgba(255,255,255,0.05)',
             border: '1px solid var(--border-color)',
-            borderRadius: 14,
-            padding: '8px 12px',
+            borderRadius: 12,
+            padding: '6px 10px',
           }}
         >
-          <p style={{ ...sageText, margin: 0, fontSize: 'clamp(13px, 3vw, 15px)' }}>{m.text}</p>
+          <p style={{ ...sageText, margin: 0, fontSize: 'clamp(12px, 2.6vw, 14px)' }}>{m.text}</p>
         </div>
       ))}
       {busy && <p style={smallText}>{busyText}</p>}
@@ -296,24 +298,35 @@ export const CompanionMode = ({ onExit, onExpressionChange }: CompanionModeProps
       style={{
         width: '100%',
         minHeight: 0,
+        maxHeight: '100%',
         flex: '1 1 auto',
-        overflowY: 'auto',
+        overflow: 'hidden',
         display: 'flex',
         flexDirection: 'column',
-        gap: 'clamp(10px, 2.2vh, 14px)',
+        gap: 'clamp(6px, 1.4vh, 10px)',
       }}
     >
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 6,
+        flex: '1 1 auto',
+        minHeight: 0,
+        overflowY: 'auto',
+        overflowX: 'hidden',
+        WebkitOverflowScrolling: 'touch',
+      }}>
       {view === 'options' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 'clamp(10px, 2.2vh, 14px)' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
           <div style={card}>
             <p style={sageText}>I&apos;m here! What would you like to do together?</p>
-            <p style={{ ...smallText, marginTop: 6, opacity: 0.75 }}>
+            <p style={{ ...smallText, marginTop: 4, opacity: 0.75 }}>
               {backendAlive
                 ? 'Sage is connected · conversational AI is ready.'
                 : 'Offline companion mode · conversational AI unavailable · everything stays on this device.'}
             </p>
           </div>
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
             <button type="button" style={primaryPill} onClick={() => go('duck')} aria-label="Think with me">
               🦆 Think With Me
             </button>
@@ -334,9 +347,10 @@ export const CompanionMode = ({ onExit, onExpressionChange }: CompanionModeProps
       {view === 'dump' && <DumpView onBack={back} onExpressionChange={onExpressionChange} />}
       {view === 'double' && <DoubleView onBack={back} onExpressionChange={onExpressionChange} />}
       {view === 'roleplay' && <RoleplayView onBack={back} onExpressionChange={onExpressionChange} />}
+      </div>
 
       {view !== 'options' && (
-        <button type="button" onClick={onExit} style={{ ...pill, alignSelf: 'flex-start', opacity: 0.85 }}>
+        <button type="button" onClick={onExit} style={{ ...pill, alignSelf: 'flex-start', opacity: 0.85, flexShrink: 0 }}>
           ↩ Exit Companion
         </button>
       )}
@@ -629,12 +643,12 @@ function DumpView({
             style={{
               ...card,
               flex: '1 1 auto',
-              minHeight: 90,
-              maxHeight: 'clamp(140px, 34vh, 260px)',
+              minHeight: 80,
+              maxHeight: 'clamp(100px, 28vh, 260px)',
               overflowY: 'auto',
               display: 'flex',
               flexDirection: 'column',
-              gap: 10,
+              gap: 8,
             }}
           >
             {items.length === 0 && <p style={smallText}>All clear. Beautiful.</p>}

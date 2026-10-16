@@ -55,11 +55,11 @@ const MODE_GLOW: Record<SageMode, number> = {
 };
 
 const BASE_W = 300;
-const BASE_H = 380;
+const BASE_H = 360;
 
-const HOOD = { left: 42, top: 78, size: 216 };
-const FACE = { left: 58, top: 94, size: 184 };
-const BODY = { left: 24, top: 264, width: 252, height: 116 };
+const HOOD = { left: 42, top: 74, size: 204 };
+const FACE = { left: 54, top: 88, size: 172 };
+const BODY = { left: 22, top: 248, width: 236, height: 110 };
 const NECK = { x: HOOD.left + HOOD.size / 2, y: HOOD.top + HOOD.size - 2 };
 
 const EYE_W = 54;
@@ -237,17 +237,20 @@ export const Character = ({ mode, expression, className = '', size = 1 }: Charac
       className={`sage-character ${className}`}
       style={{
         position: 'relative',
-        width: BASE_W,
-        height: BASE_H,
-        transformOrigin: 'center bottom',
+        width: `calc(${BASE_W}px * var(--sage-char-scale, 1))`,
+        height: `calc(${BASE_H}px * var(--sage-char-scale, 1))`,
+        flexShrink: 0,
       }}
     >
       <div
         style={{
           position: 'absolute',
-          inset: 0,
+          bottom: 0,
+          left: '50%',
+          width: BASE_W,
+          height: BASE_H,
           transformOrigin: 'center bottom',
-          transform: `scale(calc(${size} * var(--sage-char-scale, 1)))`,
+          transform: `translateX(-50%) scale(calc(${size} * var(--sage-char-scale, 1)))`,
         }}
       >
         <motion.div

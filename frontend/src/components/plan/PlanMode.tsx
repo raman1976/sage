@@ -48,9 +48,10 @@ const STORE_KEY = 'sage-plan';
 const card: React.CSSProperties = {
   background: 'rgba(255,255,255,0.04)',
   border: '1px solid var(--border-color)',
-  borderRadius: 'clamp(14px, 3vw, 20px)',
-  padding: 'clamp(10px, 2.4vh, 14px) clamp(12px, 3vw, 16px)',
+  borderRadius: 'clamp(10px, 2.5vw, 18px)',
+  padding: 'clamp(6px, 1.5vh, 12px) clamp(10px, 2.5vw, 14px)',
   boxSizing: 'border-box',
+  flexShrink: 0,
 };
 
 const pill: React.CSSProperties = {
@@ -58,12 +59,13 @@ const pill: React.CSSProperties = {
   borderRadius: '9999px',
   background: 'rgba(255,255,255,0.05)',
   color: 'var(--text-primary)',
-  fontSize: 'clamp(12px, 2.8vw, 14px)',
+  fontSize: 'clamp(11px, 2.4vw, 13px)',
   fontWeight: 600,
   fontFamily: 'system-ui, sans-serif',
-  padding: 'clamp(8px, 2vh, 10px) clamp(14px, 3vw, 18px)',
+  padding: 'clamp(5px, 1.2vh, 8px) clamp(10px, 2.4vw, 16px)',
   cursor: 'pointer',
   userSelect: 'none',
+  flexShrink: 0,
 };
 
 const primaryPill: React.CSSProperties = {
@@ -75,23 +77,23 @@ const primaryPill: React.CSSProperties = {
 
 const smallText: React.CSSProperties = {
   margin: 0,
-  fontSize: 'clamp(12px, 2.8vw, 14px)',
+  fontSize: 'clamp(11px, 2.4vw, 13px)',
   color: 'var(--text-secondary)',
-  lineHeight: 1.45,
+  lineHeight: 1.4,
   fontFamily: 'system-ui, sans-serif',
 };
 
 const sageText: React.CSSProperties = {
   margin: 0,
-  fontSize: 'clamp(14px, 3.2vw, 16px)',
+  fontSize: 'clamp(12px, 2.8vw, 15px)',
   color: 'var(--text-primary)',
-  lineHeight: 1.5,
+  lineHeight: 1.4,
   fontFamily: 'system-ui, sans-serif',
 };
 
 const rowStyle: React.CSSProperties = {
   display: 'flex',
-  gap: 8,
+  gap: 6,
   flexWrap: 'wrap',
   alignItems: 'center',
 };
@@ -104,10 +106,21 @@ const inputStyle: React.CSSProperties = {
   borderRadius: 9999,
   color: 'var(--text-primary)',
   fontSize: 'clamp(13px, 3vw, 15px)',
-  padding: '10px 16px',
+  padding: '8px 14px',
   outline: 'none',
   fontFamily: 'system-ui, sans-serif',
   boxSizing: 'border-box',
+};
+
+const panelStyle: React.CSSProperties = {
+  display: 'flex',
+  flexDirection: 'column',
+  gap: 6,
+  flex: '1 1 auto',
+  minHeight: 0,
+  overflowY: 'auto',
+  overflowX: 'hidden',
+  WebkitOverflowScrolling: 'touch',
 };
 
 const selectStyle: React.CSSProperties = {
@@ -450,24 +463,25 @@ export const PlanMode = ({ onExit, onExpressionChange, onStartFocus }: PlanModeP
       style={{
         width: '100%',
         minHeight: 0,
+        maxHeight: '100%',
         flex: '1 1 auto',
-        overflowY: 'auto',
+        overflow: 'hidden',
         display: 'flex',
         flexDirection: 'column',
-        gap: 'clamp(10px, 2.2vh, 14px)',
+        gap: 'clamp(6px, 1.4vh, 10px)',
       }}
     >
       <div style={card}>
         <p style={sageText}>🗺️ Plan Mode</p>
-        <p style={{ ...sageText, marginTop: 4 }}>{note}</p>
+        <p style={{ ...sageText, marginTop: 2 }}>{note}</p>
         {!aiAvailable && (
-          <p style={{ ...smallText, marginTop: 6, opacity: 0.75 }}>
+          <p style={{ ...smallText, marginTop: 4, opacity: 0.75 }}>
             Offline mode · AI breakdowns unavailable · your lists stay on this device.
           </p>
         )}
       </div>
 
-      <div style={rowStyle} role="tablist" aria-label="Plan sections">
+      <div style={{ ...rowStyle, flexShrink: 0 }} role="tablist" aria-label="Plan sections">
         {(['breakdown', 'decide', 'momentum'] as const).map((t) => (
           <button
             key={t}
@@ -482,6 +496,7 @@ export const PlanMode = ({ onExit, onExpressionChange, onStartFocus }: PlanModeP
         ))}
       </div>
 
+      <div style={panelStyle}>
       {aiError && (
         <div style={{ ...card, border: '1px solid rgba(255,179,167,0.5)' }}>
           <p style={{ ...smallText, color: '#E8B4B8' }}>{aiError}</p>
@@ -489,8 +504,8 @@ export const PlanMode = ({ onExit, onExpressionChange, onStartFocus }: PlanModeP
       )}
 
       {tab === 'breakdown' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <div style={{ display: 'flex', gap: 8 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <div style={{ display: 'flex', gap: 6 }}>
             <input
               value={taskDraft}
               onChange={(e) => setTaskDraft(e.target.value)}
@@ -513,7 +528,7 @@ export const PlanMode = ({ onExit, onExpressionChange, onStartFocus }: PlanModeP
               style={{
                 ...pill,
                 flex: '0 0 auto',
-                padding: '10px 14px',
+                padding: '8px 12px',
                 background: voice.listening ? 'rgba(255,179,167,0.18)' : 'rgba(255,255,255,0.05)',
               }}
             >
@@ -680,7 +695,7 @@ export const PlanMode = ({ onExit, onExpressionChange, onStartFocus }: PlanModeP
       )}
 
       {tab === 'decide' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
           <p style={smallText}>List what’s pulling at you. I’ll weigh urgency, deadlines, and effort — then suggest one place to start. You always get the final say.</p>
           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
             <input
@@ -772,7 +787,7 @@ export const PlanMode = ({ onExit, onExpressionChange, onStartFocus }: PlanModeP
       )}
 
       {tab === 'momentum' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
           <div style={card}>
             <p style={{ ...smallText, fontWeight: 700, color: 'var(--accent-primary)' }}>🚀 Momentum Keeper</p>
             {store.selected ? (
@@ -818,8 +833,9 @@ export const PlanMode = ({ onExit, onExpressionChange, onStartFocus }: PlanModeP
           </div>
         </div>
       )}
+      </div>
 
-      <div style={rowStyle}>
+      <div style={{ ...rowStyle, flexShrink: 0 }}>
         {voice.ttsSupported && (
           <button type="button" onClick={toggleVoice} aria-label={voice.voiceOn ? 'Mute Sage voice' : 'Unmute Sage voice'} style={pill}>
             {voice.voiceOn ? '🔊 Voice on' : '🔇 Muted'}

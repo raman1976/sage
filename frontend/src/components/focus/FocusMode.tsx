@@ -34,9 +34,10 @@ const STORE_KEY = 'sage-focus';
 const card: React.CSSProperties = {
   background: 'rgba(255,255,255,0.04)',
   border: '1px solid var(--border-color)',
-  borderRadius: 'clamp(14px, 3vw, 20px)',
-  padding: 'clamp(10px, 2.4vh, 14px) clamp(12px, 3vw, 16px)',
+  borderRadius: 'clamp(10px, 2.5vw, 18px)',
+  padding: 'clamp(6px, 1.5vh, 12px) clamp(10px, 2.5vw, 14px)',
   boxSizing: 'border-box',
+  flexShrink: 0,
 };
 
 const pill: React.CSSProperties = {
@@ -44,12 +45,13 @@ const pill: React.CSSProperties = {
   borderRadius: '9999px',
   background: 'rgba(255,255,255,0.05)',
   color: 'var(--text-primary)',
-  fontSize: 'clamp(12px, 2.8vw, 14px)',
+  fontSize: 'clamp(11px, 2.4vw, 13px)',
   fontWeight: 600,
   fontFamily: 'system-ui, sans-serif',
-  padding: 'clamp(8px, 2vh, 10px) clamp(14px, 3vw, 18px)',
+  padding: 'clamp(5px, 1.2vh, 8px) clamp(10px, 2.4vw, 16px)',
   cursor: 'pointer',
   userSelect: 'none',
+  flexShrink: 0,
 };
 
 const primaryPill: React.CSSProperties = {
@@ -61,23 +63,23 @@ const primaryPill: React.CSSProperties = {
 
 const smallText: React.CSSProperties = {
   margin: 0,
-  fontSize: 'clamp(12px, 2.8vw, 14px)',
+  fontSize: 'clamp(11px, 2.4vw, 13px)',
   color: 'var(--text-secondary)',
-  lineHeight: 1.45,
+  lineHeight: 1.4,
   fontFamily: 'system-ui, sans-serif',
 };
 
 const sageText: React.CSSProperties = {
   margin: 0,
-  fontSize: 'clamp(14px, 3.2vw, 16px)',
+  fontSize: 'clamp(12px, 2.8vw, 15px)',
   color: 'var(--text-primary)',
-  lineHeight: 1.5,
+  lineHeight: 1.4,
   fontFamily: 'system-ui, sans-serif',
 };
 
 const rowStyle: React.CSSProperties = {
   display: 'flex',
-  gap: 8,
+  gap: 6,
   flexWrap: 'wrap',
   alignItems: 'center',
 };
@@ -90,10 +92,21 @@ const inputStyle: React.CSSProperties = {
   borderRadius: 9999,
   color: 'var(--text-primary)',
   fontSize: 'clamp(13px, 3vw, 15px)',
-  padding: '10px 16px',
+  padding: '8px 14px',
   outline: 'none',
   fontFamily: 'system-ui, sans-serif',
   boxSizing: 'border-box',
+};
+
+const panelStyle: React.CSSProperties = {
+  display: 'flex',
+  flexDirection: 'column',
+  gap: 6,
+  flex: '1 1 auto',
+  minHeight: 0,
+  overflowY: 'auto',
+  overflowX: 'hidden',
+  WebkitOverflowScrolling: 'touch',
 };
 
 const PRESETS = [5, 10, 15, 25];
@@ -339,19 +352,20 @@ export const FocusMode = ({ onExit, onExpressionChange, initialTask, onConsumeIn
       style={{
         width: '100%',
         minHeight: 0,
+        maxHeight: '100%',
         flex: '1 1 auto',
-        overflowY: 'auto',
+        overflow: 'hidden',
         display: 'flex',
         flexDirection: 'column',
-        gap: 'clamp(10px, 2.2vh, 14px)',
+        gap: 'clamp(6px, 1.4vh, 10px)',
       }}
     >
       <div style={card}>
         <p style={sageText}>🍃 Focus Mode</p>
-        <p style={{ ...smallText, marginTop: 4 }}>{note}</p>
+        <p style={{ ...smallText, marginTop: 2 }}>{note}</p>
       </div>
 
-      <div style={rowStyle} role="tablist" aria-label="Focus sections">
+      <div style={{ ...rowStyle, flexShrink: 0 }} role="tablist" aria-label="Focus sections">
         {(['timer', 'park', 'marks'] as const).map((t) => (
           <button
             key={t}
@@ -366,8 +380,9 @@ export const FocusMode = ({ onExit, onExpressionChange, initialTask, onConsumeIn
         ))}
       </div>
 
+      <div style={panelStyle}>
       {tab === 'timer' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
           <input
             value={task}
             onChange={(e) => setTask(e.target.value)}
@@ -399,7 +414,7 @@ export const FocusMode = ({ onExit, onExpressionChange, initialTask, onConsumeIn
               aria-label="Custom duration in minutes"
               disabled={running}
               inputMode="numeric"
-              style={{ ...inputStyle, flex: '0 1 auto', width: 110 }}
+              style={{ ...inputStyle, flex: '0 1 auto', width: 90, padding: '8px 12px' }}
             />
             <label style={{ ...smallText, display: 'flex', alignItems: 'center', gap: 6 }}>
               <input
@@ -413,11 +428,11 @@ export const FocusMode = ({ onExit, onExpressionChange, initialTask, onConsumeIn
           </div>
 
           <div style={card}>
-            <p style={{ ...sageText, fontSize: 'clamp(28px, 7vw, 36px)', fontWeight: 700, textAlign: 'center' }}>
+            <p style={{ ...sageText, fontSize: 'clamp(22px, 5.5vw, 32px)', fontWeight: 700, textAlign: 'center' }}>
               {fmtClock(remaining)}
             </p>
             <div
-              style={{ height: 8, borderRadius: 4, background: 'rgba(255,255,255,0.10)', marginTop: 8, overflow: 'hidden' }}
+              style={{ height: 6, borderRadius: 3, background: 'rgba(255,255,255,0.10)', marginTop: 6, overflow: 'hidden' }}
               role="progressbar"
               aria-valuenow={Math.round(progress * 100)}
               aria-valuemin={0}
@@ -488,9 +503,9 @@ export const FocusMode = ({ onExit, onExpressionChange, initialTask, onConsumeIn
       )}
 
       {tab === 'park' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
           <p style={smallText}>Park distracting thoughts here without stopping the timer. Deal with them later.</p>
-          <div style={{ display: 'flex', gap: 8 }}>
+          <div style={{ display: 'flex', gap: 6 }}>
             <input
               value={parkDraft}
               onChange={(e) => setParkDraft(e.target.value)}
@@ -511,7 +526,7 @@ export const FocusMode = ({ onExit, onExpressionChange, initialTask, onConsumeIn
               style={{
                 ...pill,
                 flex: '0 0 auto',
-                padding: '10px 14px',
+                padding: '8px 12px',
                 background: voice.listening ? 'rgba(255,179,167,0.18)' : 'rgba(255,255,255,0.05)',
               }}
             >
@@ -524,7 +539,7 @@ export const FocusMode = ({ onExit, onExpressionChange, initialTask, onConsumeIn
           {voice.sttError && <p style={{ ...smallText, color: '#E8B4B8' }}>{voice.sttError}</p>}
           {store.parked.length === 0 && <p style={smallText}>Nothing parked. Mind like still water. 🌊</p>}
           {store.parked.map((p) => (
-            <div key={p.id} style={{ ...card, display: 'flex', gap: 8, alignItems: 'center' }}>
+            <div key={p.id} style={{ ...card, display: 'flex', gap: 6, alignItems: 'center' }}>
               <p style={{ ...smallText, flex: '1 1 auto', color: 'var(--text-primary)' }}>{p.text}</p>
               <button type="button" onClick={() => parkToTask(p.id)} style={pill} aria-label="Convert to task">
                 → Task
@@ -538,7 +553,7 @@ export const FocusMode = ({ onExit, onExpressionChange, initialTask, onConsumeIn
             <div style={card}>
               <p style={{ ...smallText, fontWeight: 700, color: 'var(--text-primary)' }}>Queued tasks</p>
               {store.queue.map((q) => (
-                <div key={q} style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 6 }}>
+                <div key={q} style={{ display: 'flex', gap: 6, alignItems: 'center', marginTop: 4 }}>
                   <p style={{ ...smallText, flex: '1 1 auto', color: 'var(--text-primary)' }}>{q}</p>
                   <button type="button" onClick={() => loadQueued(q)} style={pill}>
                     Load
@@ -554,7 +569,7 @@ export const FocusMode = ({ onExit, onExpressionChange, initialTask, onConsumeIn
       )}
 
       {tab === 'marks' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
           <p style={smallText}>Save where you are — task, progress, next step — and pick it back up anytime, even after a refresh.</p>
           <input
             value={progressNote}
@@ -578,11 +593,11 @@ export const FocusMode = ({ onExit, onExpressionChange, initialTask, onConsumeIn
           {store.bookmarks.length === 0 && <p style={smallText}>No bookmarks yet.</p>}
           {store.bookmarks.map((b) => (
             <div key={b.id} style={card}>
-              <p style={{ ...sageText, fontSize: 'clamp(13px, 3vw, 15px)' }}>“{b.task}”</p>
-              {b.progress && <p style={{ ...smallText, marginTop: 4 }}>Where: {b.progress}</p>}
+              <p style={{ ...sageText, fontSize: 'clamp(12px, 2.6vw, 14px)' }}>“{b.task}”</p>
+              {b.progress && <p style={{ ...smallText, marginTop: 2 }}>Where: {b.progress}</p>}
               {b.nextStep && <p style={{ ...smallText, marginTop: 2 }}>Next: {b.nextStep}</p>}
-              <p style={{ ...smallText, marginTop: 4, opacity: 0.6 }}>{new Date(b.savedAt).toLocaleString()}</p>
-              <div style={{ ...rowStyle, marginTop: 8 }}>
+              <p style={{ ...smallText, marginTop: 2, opacity: 0.6 }}>{new Date(b.savedAt).toLocaleString()}</p>
+              <div style={{ ...rowStyle, marginTop: 6 }}>
                 <button type="button" onClick={() => resumeBookmark(b)} style={primaryPill}>
                   ▶ Resume
                 </button>
@@ -594,8 +609,9 @@ export const FocusMode = ({ onExit, onExpressionChange, initialTask, onConsumeIn
           ))}
         </div>
       )}
+      </div>
 
-      <button type="button" onClick={onExit} style={{ ...pill, alignSelf: 'flex-start', opacity: 0.85 }}>
+      <button type="button" onClick={onExit} style={{ ...pill, alignSelf: 'flex-start', opacity: 0.85, flexShrink: 0 }}>
         ↩ Exit Focus
       </button>
     </div>

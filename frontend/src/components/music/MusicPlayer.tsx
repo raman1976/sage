@@ -333,7 +333,7 @@ export const MusicPlayer = ({
     typeof window !== 'undefined' &&
     window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-  // Detect compact landscape (iPhone 16 Pro ~402px height)
+// Detect compact landscape (iPhone 16 Pro ~402px height)
   const [compact, setCompact] = useState(false);
   useEffect(() => {
     const mq = window.matchMedia('(max-height: 420px) and (orientation: landscape)');
@@ -343,8 +343,8 @@ export const MusicPlayer = ({
     return () => mq.removeEventListener('change', update);
   }, []);
 
-  const artSize = compact ? 44 : 64;
-  const btnSize = compact ? 34 : 40;
+  const artSize = compact ? 32 : 64;
+  const btnSize = compact ? 28 : 40;
 
   return (
     <motion.div
@@ -355,19 +355,20 @@ export const MusicPlayer = ({
       aria-label="Music player"
       style={{
         width: '100%',
-        maxWidth: compact ? 280 : 380,
+        maxWidth: compact ? 240 : 380,
         background: 'rgba(48, 43, 58, 0.55)',
         backdropFilter: 'blur(16px)',
         WebkitBackdropFilter: 'blur(16px)',
-        borderRadius: compact ? 14 : 20,
+        borderRadius: compact ? 10 : 18,
         border: '1px solid rgba(185,161,221,0.14)',
         boxShadow: '0 8px 32px rgba(0,0,0,0.35), 0 0 0 1px rgba(185,161,221,0.06) inset, 0 0 20px rgba(185,161,221,0.05)',
-        padding: compact ? '8px 10px 6px' : '14px 16px 12px',
+        padding: compact ? '6px 8px 4px' : '12px 14px 10px',
         display: 'flex',
         flexDirection: 'column',
-        gap: compact ? 6 : 10,
+        gap: compact ? 4 : 8,
         boxSizing: 'border-box',
         fontFamily: 'var(--font-body)',
+        flexShrink: 0,
       }}
     >
       {/* top row: art + info + controls */}
