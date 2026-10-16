@@ -48,13 +48,45 @@ class ApiService {
     message: string,
     history: Array<{ role: 'user' | 'assistant'; content: string }> = []
   ): Promise<{ reply: string }> {
+    return this.chatWithSignal(mode, message, history);
+  }
+
+  /** Same as chat() but abortable (timeouts, unmounts, voice toggle). */
+  async chatWithSignal(
+    mode: string,
+    message: string,
+    history: Array<{ role: 'user' | 'assistant'; content: string }> = [],
+    signal?: AbortSignal,
+  ): Promise<{ reply: string }> {
     const response = await fetch(`${this.baseUrl}/api/chat`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ mode, message, history }),
+      signal,
     });
     if (!response.ok) throw new Error('AI companion unavailable');
     return response.json();
+  }
+
+  /**
+   * Ask Nemotron which mode (if any) fits the recent home conversation.
+   * Returns the mode id or null. Throws when unavailable — callers treat
+   * any failure as "no suggestion" so ordinary chat never breaks.
+   */
+  async suggestMode(
+    history: Array<{ role: 'user' | 'assistant'; content: string }> = [],
+    signal?: AbortSignal,
+  ): Promise<{ mode: string | null }> {
+    const response = await fetch(`${this.baseUrl}/api/mode-suggestion`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ history }),
+      signal,
+    });
+    if (!response.ok) throw new Error('Mode suggestion unavailable');
+    const data = await response.json() as { mode?: string | null };
+    const valid = ['calm', 'focus', 'companion', 'plan'];
+    return { mode: data.mode && valid.includes(data.mode) ? data.mode : null };
   }
 }
 

@@ -6,9 +6,13 @@ import { CalmMode } from '../calm';
 import { CompanionMode } from '../companion';
 import { FocusMode } from '../focus';
 import { PlanMode } from '../plan';
-import { Header, InputField, ModeButton } from '../ui';
+import { Header, ModeButton } from '../ui';
+import { VoiceAssistant, VoiceSettings, type VoiceUiState } from '../voice';
 import { MusicPlayer } from '../music';
 import { useMusicPlayer } from '../../hooks/useMusicPlayer';
+import { useVoice } from '../../hooks/useVoice';
+import { useSageChat } from '../../hooks/useSageChat';
+import { useModeSuggestion, matchConfirmation, type PendingSuggestion } from '../../hooks/useModeSuggestion';
 import { useState, useCallback, useRef, useEffect } from 'react';
 
 interface MainScreenProps {
@@ -85,16 +89,34 @@ export const MainScreen = ({
   const [planExpression, setPlanExpression] = useState<SageExpression | null>(null);
   const [focusExpression, setFocusExpression] = useState<SageExpression | null>(null);
   const [focusTask, setFocusTask] = useState<string | null>(null);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [voiceExpression, setVoiceExpression] = useState<SageExpression | null>(null);
   const overrideTimerRef = useRef<number | null>(null);
 
   const music = useMusicPlayer(currentMode);
+  const voice = useVoice();
+  const chat = useSageChat();
+  const suggest = useModeSuggestion();
+  const [modeEntryContext, setModeEntryContext] = useState<string | null>(null);
 
-  // Voice ducking: lower music volume when Sage speaks via speechSynthesis
+  const handleConsumeEntryContext = useCallback(() => {
+    setModeEntryContext(null);
+  }, []);
+
+  const voiceUiState: VoiceUiState = voice.listening
+    ? 'listening'
+    : voice.speaking
+      ? 'speaking'
+      : chat.status === 'thinking'
+        ? 'thinking'
+        : 'idle';
+
+  // Voice ducking: lower music while Sage listens or speaks via speechSynthesis
   useEffect(() => {
     if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
     let wasDucked = false;
     const check = () => {
-      const speaking = window.speechSynthesis.speaking;
+      const speaking = window.speechSynthesis.speaking || voice.listening;
       if (speaking && !wasDucked) {
         music.duckVolume(true);
         wasDucked = true;
@@ -108,7 +130,52 @@ export const MainScreen = ({
       window.clearInterval(interval);
       if (wasDucked) music.duckVolume(false);
     };
-  }, [music]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [music, voice.listening]);
+
+  // Return Sage's face to idle shortly after a voice interaction fully ends.
+  const voiceActive = voice.listening || voice.speaking || chat.status === 'thinking';
+  useEffect(() => {
+    if (voiceActive || !voiceExpression) return;
+    const t = window.setTimeout(() => setVoiceExpression(null), 1500);
+    return () => window.clearTimeout(t);
+  }, [voiceActive, voiceExpression]);
+
+  /* ---- Home chat session: fresh after 30s idle (React state only) ---- */
+  const INACTIVITY_MS = 30000;
+  const inactivityTimerRef = useRef<number | null>(null);
+
+  const startNewHomeSession = useCallback(() => {
+    chat.startNewSession();
+    suggest.clearSuggestion();
+    setInputValue('');
+    setShowWelcome(true);
+    setVoiceExpression(null);
+  }, [chat.startNewSession, suggest.clearSuggestion]);
+
+  // Latest-state gate so the timeout never clears mid-thought or mid-speech.
+  const sessionResetGateRef = useRef({ busy: false });
+  sessionResetGateRef.current.busy = voice.listening || voice.speaking || chat.status === 'thinking';
+
+  const scheduleInactivityReset = useCallback(() => {
+    if (inactivityTimerRef.current) window.clearTimeout(inactivityTimerRef.current);
+    inactivityTimerRef.current = window.setTimeout(() => {
+      if (sessionResetGateRef.current.busy) {
+        // Nemotron generating or Sage speaking/listening — defer, never drop.
+        scheduleInactivityReset();
+        return;
+      }
+      startNewHomeSession();
+      scheduleInactivityReset();
+    }, INACTIVITY_MS);
+  }, [startNewHomeSession]);
+
+  useEffect(() => {
+    scheduleInactivityReset();
+    return () => {
+      if (inactivityTimerRef.current) window.clearTimeout(inactivityTimerRef.current);
+    };
+  }, [scheduleInactivityReset]);
 
   const isCalm = currentMode === 'calm';
   const isCompanion = currentMode === 'companion';
@@ -122,7 +189,10 @@ export const MainScreen = ({
     setPlanExpression(null);
     setFocusExpression(null);
     setFocusTask(null);
+    setModeEntryContext(null);
+    suggest.clearSuggestion();
     onModeChange('idle');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [onModeChange]);
 
   const flashExpression = useCallback((expr: SageExpression, durationMs: number) => {
@@ -146,15 +216,94 @@ export const MainScreen = ({
       flashExpression('excited', 1300);
     }
     setInputValue(value);
-  }, [flashExpression, isCalm, isCompanion, isPlan, isFocus]);
+    scheduleInactivityReset();
+  }, [flashExpression, isCalm, isCompanion, isPlan, isFocus, scheduleInactivityReset]);
 
-  const handleSubmit = useCallback((value: string) => {
-    if (value.trim()) {
-      onSendMessage(value.trim());
-      setInputValue('');
-      setShowWelcome(false);
+  /** Home text/voice chat: confirmation-first, then Nemotron, then maybe suggest. */
+  const handleHomeSubmit = useCallback(async (value: string) => {
+    const text = value.trim();
+    if (!text) return;
+    scheduleInactivityReset();
+
+    // A pending suggestion gets first dibs — "yes"/"no" answers it (text or voice).
+    if (suggest.suggestion) {
+      const verdict = matchConfirmation(text);
+      if (verdict === 'yes') {
+        const taken = suggest.takeSuggestion();
+        onSendMessage(text);
+        setInputValue('');
+        setShowWelcome(false);
+        if (taken) confirmSuggestion(taken);
+        return;
+      }
+      if (verdict === 'no') {
+        suggest.declineSuggestion();
+        // fall through: keep chatting normally
+      }
     }
-  }, [onSendMessage]);
+    suggest.noteUserMessage();
+
+    onSendMessage(text);
+    setInputValue('');
+    setShowWelcome(false);
+    const reply = await chat.send(text);
+    if (reply) {
+      if (voice.voiceOn && voice.autoSpeak && voice.ttsSupported) {
+        setVoiceExpression('happy');
+        voice.speak(reply);
+      } else {
+        setVoiceExpression('happy');
+      }
+      // Ask Nemotron (fire-and-forget) whether a mode would help here.
+      const hist = [
+        ...chat.messages.slice(-7).map(({ role, content }) => ({ role, content })),
+        { role: 'user' as const, content: text },
+        { role: 'assistant' as const, content: reply },
+      ].slice(-8);
+      void suggest.maybeSuggest(hist, text);
+    } else {
+      setVoiceExpression('calm');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [onSendMessage, chat.send, chat.messages, voice.voiceOn, voice.autoSpeak, voice.ttsSupported, voice.speak, suggest.suggestion, suggest.takeSuggestion, suggest.declineSuggestion, suggest.noteUserMessage, suggest.maybeSuggest]);
+
+  /** Navigate to a confirmed suggestion, carrying conversation context along. */
+  const confirmSuggestion = useCallback((taken: PendingSuggestion) => {
+    voice.stopSpeaking();
+    voice.stopListening();
+    setVoiceExpression(null);
+    if (taken.mode === 'focus') {
+      handleStartFocus(taken.context);
+      return;
+    }
+    setModeEntryContext(taken.context);
+    setCalmExpression(null);
+    setCompanionExpression(null);
+    setPlanExpression(null);
+    setFocusExpression(null);
+    onModeChange(taken.mode);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [onModeChange, voice.stopSpeaking, voice.stopListening]);
+
+  /** Mic toggle: stop speech / stop listening / start listening. Never double-starts. */
+  const handleMicToggle = useCallback(() => {
+    scheduleInactivityReset();
+    if (voice.speaking) {
+      voice.stopSpeaking();
+      return;
+    }
+    if (voice.listening) {
+      voice.stopListening();
+      return;
+    }
+    if (chat.status === 'thinking') return; // one AI request at a time
+    voice.stopSpeaking(); // avoid mic catching Sage's own voice
+    setVoiceExpression('curious');
+    voice.startListening((spoken: string) => {
+      handleHomeSubmit(spoken);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [voice.speaking, voice.listening, chat.status, voice.stopSpeaking, voice.stopListening, voice.startListening, handleHomeSubmit]);
 
   const handleModeClick = useCallback((mode: SageMode) => {
     if (mode !== currentMode) {
@@ -162,8 +311,11 @@ export const MainScreen = ({
       setCompanionExpression(null);
       setPlanExpression(null);
       setFocusExpression(null);
+      setModeEntryContext(null);
+      suggest.clearSuggestion();
       onModeChange(mode);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentMode, onModeChange]);
 
   const handleCalmExit = useCallback(() => {
@@ -197,7 +349,7 @@ export const MainScreen = ({
     setFocusTask(null);
   }, []);
 
-  const effectiveExpression = expressionOverride ?? calmExpression ?? companionExpression ?? planExpression ?? focusExpression ?? undefined;
+  const effectiveExpression = expressionOverride ?? voiceExpression ?? calmExpression ?? companionExpression ?? planExpression ?? focusExpression ?? undefined;
 
   return (
     <motion.div
@@ -249,10 +401,11 @@ export const MainScreen = ({
       />
 
       <Header
-        onSettingsClick={() => console.log('Settings clicked')}
+        onSettingsClick={() => setSettingsOpen(true)}
         onCustomizeClick={() => console.log('Customize clicked')}
         onLogoClick={handleBackToHome}
       />
+      <VoiceSettings open={settingsOpen} onClose={() => setSettingsOpen(false)} voice={voice} />
 
       <main
         style={{
@@ -362,11 +515,11 @@ export const MainScreen = ({
           )}
 
           {isCalm ? (
-            <CalmMode onExit={handleCalmExit} onExpressionChange={setCalmExpression} />
+            <CalmMode onExit={handleCalmExit} onExpressionChange={setCalmExpression} entryContext={modeEntryContext} onConsumeEntryContext={handleConsumeEntryContext} />
           ) : isCompanion ? (
-            <CompanionMode onExit={handleCompanionExit} onExpressionChange={setCompanionExpression} />
+            <CompanionMode onExit={handleCompanionExit} onExpressionChange={setCompanionExpression} entryContext={modeEntryContext} onConsumeEntryContext={handleConsumeEntryContext} />
           ) : isPlan ? (
-            <PlanMode onExit={handlePlanExit} onExpressionChange={setPlanExpression} onStartFocus={handleStartFocus} />
+            <PlanMode onExit={handlePlanExit} onExpressionChange={setPlanExpression} onStartFocus={handleStartFocus} entryContext={modeEntryContext} onConsumeEntryContext={handleConsumeEntryContext} />
           ) : isFocus ? (
             <FocusMode
               onExit={handleFocusExit}
@@ -409,20 +562,31 @@ export const MainScreen = ({
                 </motion.div>
               )}
  
-              <motion.div
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4, delay: showWelcome ? 0.35 : 0.15 }}
-                style={{ width: '100%' }}
-              >
-                <InputField
-                  value={inputValue}
-                  onChange={handleInputChange}
-                  onSubmit={handleSubmit}
-                  placeholder="Tell me what's on your mind..."
-                  autoFocus={!showWelcome}
-                />
-              </motion.div>
+              <VoiceAssistant
+                inputValue={inputValue}
+                onInputChange={handleInputChange}
+                onTextSubmit={handleHomeSubmit}
+                voiceState={voiceUiState}
+                sttSupported={voice.sttSupported}
+                sttError={voice.sttError}
+                chatError={chat.error}
+                onMicToggle={handleMicToggle}
+                messages={chat.messages}
+                animateDelay={showWelcome}
+                suggestion={suggest.suggestion ? {
+                  modeLabel: suggest.modeLabel(suggest.suggestion.mode),
+                  askLine: suggest.suggestion.askLine,
+                } : null}
+                onConfirmSuggestion={() => {
+                  const taken = suggest.takeSuggestion();
+                  if (taken) confirmSuggestion(taken);
+                }}
+                onDeclineSuggestion={() => {
+                  suggest.declineSuggestion();
+                  scheduleInactivityReset();
+                }}
+                transcriptLimit={suggest.suggestion ? 2 : 8}
+              />
  
               {/* ---- 2×2 mode grid (Home only) ---- */}
               <motion.div

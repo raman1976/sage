@@ -28,3 +28,11 @@ class ChatRequest(BaseModel):
 
 class ChatResponse(BaseModel):
     reply: str
+
+
+class ModeSuggestionRequest(BaseModel):
+    history: Optional[List[dict]] = None
+
+
+class ModeSuggestionResponse(BaseModel):
+    mode: Optional[str] = None

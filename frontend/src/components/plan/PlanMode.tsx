@@ -7,6 +7,9 @@ interface PlanModeProps {
   onExit: () => void;
   onExpressionChange: (expr: SageExpression | null) => void;
   onStartFocus: (task: string) => void;
+  /** Text carried over from Home chat so the user doesn't re-explain. */
+  entryContext?: string | null;
+  onConsumeEntryContext?: () => void;
 }
 
 type PlanTab = 'breakdown' | 'decide' | 'momentum';
@@ -157,11 +160,11 @@ function parseSteps(text: string): string[] {
     .slice(0, 5);
 }
 
-export const PlanMode = ({ onExit, onExpressionChange, onStartFocus }: PlanModeProps) => {
+export const PlanMode = ({ onExit, onExpressionChange, onStartFocus, entryContext, onConsumeEntryContext }: PlanModeProps) => {
   const voice = useVoice();
   const [tab, setTab] = useState<PlanTab>('breakdown');
   const [store, setStore] = useState<PlanStore>(loadStore);
-  const [taskDraft, setTaskDraft] = useState('');
+  const [taskDraft, setTaskDraft] = useState(entryContext ?? '');
   const [manualStep, setManualStep] = useState('');
   const [busy, setBusy] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
@@ -176,6 +179,12 @@ export const PlanMode = ({ onExit, onExpressionChange, onStartFocus }: PlanModeP
   const [rec, setRec] = useState<Rec | null>(null);
   const busyRef = useRef(false);
   const flashTimer = useRef<number | null>(null);
+
+  // Release the parent's context slot; this mount already copied it into taskDraft.
+  useEffect(() => {
+    if (entryContext) onConsumeEntryContext?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     onExpressionChange('happy');

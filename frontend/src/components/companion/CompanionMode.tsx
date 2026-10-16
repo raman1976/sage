@@ -8,6 +8,9 @@ type CompanionView = 'options' | 'duck' | 'dump' | 'double' | 'roleplay';
 interface CompanionModeProps {
   onExit: () => void;
   onExpressionChange: (expr: SageExpression | null) => void;
+  /** Text carried over from Home chat so the user doesn't re-explain. */
+  entryContext?: string | null;
+  onConsumeEntryContext?: () => void;
 }
 
 interface Msg {
@@ -270,9 +273,16 @@ function MicSendRow({
 
 /* --------------------------------- main view --------------------------------- */
 
-export const CompanionMode = ({ onExit, onExpressionChange }: CompanionModeProps) => {
+export const CompanionMode = ({ onExit, onExpressionChange, entryContext, onConsumeEntryContext }: CompanionModeProps) => {
   const [view, setView] = useState<CompanionView>('options');
   const [backendAlive, setBackendAlive] = useState(false);
+  // Keep a local copy of carried-over context (DuckView mounts later),
+  // then release the parent slot.
+  const [entry] = useState(entryContext ?? '');
+  useEffect(() => {
+    if (entryContext) onConsumeEntryContext?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     onExpressionChange('happy');
@@ -343,7 +353,7 @@ export const CompanionMode = ({ onExit, onExpressionChange }: CompanionModeProps
         </div>
       )}
 
-      {view === 'duck' && <DuckView onBack={back} onExpressionChange={onExpressionChange} />}
+      {view === 'duck' && <DuckView onBack={back} onExpressionChange={onExpressionChange} initialDraft={entry} />}
       {view === 'dump' && <DumpView onBack={back} onExpressionChange={onExpressionChange} />}
       {view === 'double' && <DoubleView onBack={back} onExpressionChange={onExpressionChange} />}
       {view === 'roleplay' && <RoleplayView onBack={back} onExpressionChange={onExpressionChange} />}
@@ -365,15 +375,17 @@ CompanionMode.displayName = 'CompanionMode';
 function DuckView({
   onBack,
   onExpressionChange,
+  initialDraft,
 }: {
   onBack: () => void;
   onExpressionChange: (expr: SageExpression | null) => void;
+  initialDraft?: string;
 }) {
   const voice = useVoice();
   const [messages, setMessages] = useState<Msg[]>([
     { id: nextId(), role: 'sage', text: 'Tell me about the problem — out loud or in words. I’ll think it through with you, one question at a time.' },
   ]);
-  const [draft, setDraft] = useState('');
+  const [draft, setDraft] = useState(initialDraft ?? '');
   const [busy, setBusy] = useState(false);
   const [turn, setTurn] = useState(0);
   const [aiAvailable, setAiAvailable] = useState(false);

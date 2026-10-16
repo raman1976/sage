@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import JSONResponse
-from app.models.schemas import HealthResponse, AgentStateRequest, AgentStateResponse, ChatRequest, ChatResponse
+from app.models.schemas import HealthResponse, AgentStateRequest, AgentStateResponse, ChatRequest, ChatResponse, ModeSuggestionRequest, ModeSuggestionResponse
 from app.services.agent import agent_service
 from app.services.nemotron import nemotron_service
 
@@ -14,6 +14,11 @@ async def options_api_state():
 
 @router.options("/api/chat", include_in_schema=False)
 async def options_api_chat():
+    return JSONResponse(status_code=200, content={"message": "ok"})
+
+
+@router.options("/api/mode-suggestion", include_in_schema=False)
+async def options_api_mode_suggestion():
     return JSONResponse(status_code=200, content={"message": "ok"})
 
 
@@ -49,6 +54,22 @@ async def chat(request: ChatRequest):
             history=request.history,
         )
         return ChatResponse(reply=reply)
+    except ValueError as e:
+        if "not configured" in str(e):
+            raise HTTPException(
+                status_code=503,
+                detail="AI companion unavailable: NEBIUS_API_KEY not configured. Set it in your .env file."
+            )
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"AI error: {str(e)}")
+
+
+@router.post("/api/mode-suggestion", response_model=ModeSuggestionResponse)
+async def mode_suggestion(request: ModeSuggestionRequest):
+    try:
+        mode = await nemotron_service.suggest_mode(history=request.history or [])
+        return ModeSuggestionResponse(mode=mode)
     except ValueError as e:
         if "not configured" in str(e):
             raise HTTPException(

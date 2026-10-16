@@ -9,6 +9,9 @@ type CalmView = 'options' | 'breathe' | 'ground' | 'talk' | 'done';
 interface CalmModeProps {
   onExit: () => void;
   onExpressionChange: (expr: SageExpression | null) => void;
+  /** Text carried over from Home chat so the user doesn't re-explain. */
+  entryContext?: string | null;
+  onConsumeEntryContext?: () => void;
 }
 
 interface TalkMsg {
@@ -117,11 +120,18 @@ const SMALL_STEPS = [
   'Write down the one thing that matters most today.',
 ];
 
-export const CalmMode = ({ onExit, onExpressionChange }: CalmModeProps) => {
+export const CalmMode = ({ onExit, onExpressionChange, entryContext, onConsumeEntryContext }: CalmModeProps) => {
   const [view, setView] = useState<CalmView>('options');
   const [doneFrom, setDoneFrom] = useState('that exercise');
   const [backendAlive, setBackendAlive] = useState(false);
   const reduced = useReducedMotion();
+  // Keep a local copy of carried-over context (TalkView mounts later),
+  // then release the parent slot.
+  const [entry] = useState(entryContext ?? '');
+  useEffect(() => {
+    if (entryContext) onConsumeEntryContext?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     onExpressionChange('calm');
@@ -214,6 +224,7 @@ export const CalmMode = ({ onExit, onExpressionChange }: CalmModeProps) => {
           onDone={() => finishExercise('our talk')}
           onBack={() => goExercise('options')}
           onExpressionChange={onExpressionChange}
+          initialDraft={entry}
         />
       )}
 
@@ -426,16 +437,18 @@ function TalkView({
   onDone,
   onBack,
   onExpressionChange,
+  initialDraft,
 }: {
   onDone: () => void;
   onBack: () => void;
   onExpressionChange: (expr: SageExpression | null) => void;
+  initialDraft?: string;
 }) {
   const voice = useVoice();
   const [messages, setMessages] = useState<TalkMsg[]>([
     { id: nextId(), role: 'sage', text: "I'm listening. Tell me what's feeling overwhelming — take your time." },
   ]);
-  const [draft, setDraft] = useState('');
+  const [draft, setDraft] = useState(initialDraft ?? '');
   const [busy, setBusy] = useState(false);
   const [turn, setTurn] = useState(0);
   const [aiChecked, setAiChecked] = useState(false);
