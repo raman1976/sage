@@ -119,7 +119,7 @@ export const Header = ({ onSettingsClick, onCustomizeClick, onLogoClick }: Heade
         pointerEvents: 'auto',
       }}
     >
-      <IconButton icon="✨" onClick={onCustomizeClick} aria-label="Customize Sage" />
+      <IconButton icon="✨" onClick={onCustomizeClick} aria-label="Change Sage avatar" />
       <IconButton icon="⚙️" onClick={onSettingsClick} aria-label="Settings" />
     </div>
   </header>

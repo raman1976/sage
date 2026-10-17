@@ -1,7 +1,7 @@
 import { motion } from 'motion/react';
 import type { SageMode, SageExpression } from '../../types';
 import { MODE_BUTTONS } from '../../types';
-import { Character } from '../character';
+import { Character, nextAvatar, type SageAvatar } from '../character';
 import { CalmMode } from '../calm';
 import { CompanionMode } from '../companion';
 import { FocusMode } from '../focus';
@@ -90,6 +90,7 @@ export const MainScreen = ({
   const [focusExpression, setFocusExpression] = useState<SageExpression | null>(null);
   const [focusTask, setFocusTask] = useState<string | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [avatar, setAvatar] = useState<SageAvatar>('lavender');
   const [voiceExpression, setVoiceExpression] = useState<SageExpression | null>(null);
   const overrideTimerRef = useRef<number | null>(null);
   // Latest home submitter for the continuous voice loop (outlives closures).
@@ -426,7 +427,7 @@ export const MainScreen = ({
 
       <Header
         onSettingsClick={() => setSettingsOpen(true)}
-        onCustomizeClick={() => console.log('Customize clicked')}
+        onCustomizeClick={() => setAvatar((a) => nextAvatar(a))}
         onLogoClick={handleBackToHome}
       />
       <VoiceSettings open={settingsOpen} onClose={() => setSettingsOpen(false)} voice={voice} />
@@ -478,7 +479,7 @@ export const MainScreen = ({
               pointerEvents: 'none',
             }}
           />
-          <Character mode={currentMode} expression={effectiveExpression} size={1} />
+          <Character mode={currentMode} expression={effectiveExpression} size={1} avatar={avatar} />
           <MusicPlayer {...music} />
         </div>
 

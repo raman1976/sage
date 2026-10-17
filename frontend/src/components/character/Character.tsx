@@ -2,12 +2,68 @@ import { motion, useMotionValue, useTransform, type MotionValue } from 'motion/r
 import { useEffect, useRef, useState } from 'react';
 import type { SageMode, SageExpression } from '../../types';
 
+export type SageAvatar = 'lavender' | 'cat' | 'bee' | 'ladybug';
+
+/** Cycle order for the ✨ button: Lavender → Cat → Bee → Ladybug → Lavender. */
+export const AVATAR_ORDER: SageAvatar[] = ['lavender', 'cat', 'bee', 'ladybug'];
+
+export const nextAvatar = (current: SageAvatar): SageAvatar =>
+  AVATAR_ORDER[(AVATAR_ORDER.indexOf(current) + 1) % AVATAR_ORDER.length];
+
 interface CharacterProps {
   mode: SageMode;
   expression?: SageExpression;
   className?: string;
   size?: number;
+  avatar?: SageAvatar;
 }
+
+interface AvatarPalette {
+  headHi: string;
+  head: string;
+  headMid: string;
+  headDark: string;
+  bodyHi: string;
+  bodyMid: string;
+  bodyDark: string;
+  ear: string;
+  earInner: string;
+  pattern: string;
+  shadow: string;
+  shadowMid: string;
+  shadowSoft: string;
+}
+
+const AVATAR_PALETTES: Record<SageAvatar, AvatarPalette> = {
+  lavender: {
+    headHi: 'var(--sage-hood-hi)', head: 'var(--sage-hood)', headMid: '#A189CF', headDark: 'var(--sage-hood-dark)',
+    bodyHi: '#C4B1E4', bodyMid: '#A690D2', bodyDark: 'var(--sage-hood-dark)',
+    ear: 'var(--sage-cat-ear)', earInner: 'var(--sage-face-hi)',
+    pattern: 'rgba(255,255,255,0)',
+    shadow: 'rgba(96,76,160,0.30)', shadowMid: 'rgba(96,76,160,0.22)', shadowSoft: 'rgba(96,76,160,0.16)',
+  },
+  cat: {
+    headHi: '#FDD3E3', head: '#F6A9C9', headMid: '#EE8FBB', headDark: '#E27BA8',
+    bodyHi: '#FDD3E3', bodyMid: '#EE8FBB', bodyDark: '#E27BA8',
+    ear: '#F6A9C9', earInner: '#FBE0EC',
+    pattern: 'rgba(255,255,255,0)',
+    shadow: 'rgba(184,72,122,0.30)', shadowMid: 'rgba(184,72,122,0.24)', shadowSoft: 'rgba(184,72,122,0.16)',
+  },
+  bee: {
+    headHi: '#FFE687', head: '#FFD23F', headMid: '#F4B923', headDark: '#E8A81E',
+    bodyHi: '#FFE07A', bodyMid: '#F4B923', bodyDark: '#E8A81E',
+    ear: '#5A3A1A', earInner: '#FFE687',
+    pattern: '#5A3A1A',
+    shadow: 'rgba(170,120,20,0.30)', shadowMid: 'rgba(170,120,20,0.24)', shadowSoft: 'rgba(170,120,20,0.16)',
+  },
+  ladybug: {
+    headHi: '#F26B62', head: '#E23B34', headMid: '#CC2B26', headDark: '#B2231E',
+    bodyHi: '#F26B62', bodyMid: '#CC2B26', bodyDark: '#B2231E',
+    ear: '#E23B34', earInner: '#F26B62',
+    pattern: '#1C1414',
+    shadow: 'rgba(110,15,12,0.35)', shadowMid: 'rgba(110,15,12,0.26)', shadowSoft: 'rgba(110,15,12,0.18)',
+  },
+};
 
 interface ExpressionConfig {
   eyeOpen: number;
@@ -60,6 +116,10 @@ const BASE_H = 360;
 const HOOD = { left: 42, top: 74, size: 204 };
 const FACE = { left: 54, top: 88, size: 172 };
 const BODY = { left: 22, top: 248, width: 236, height: 110 };
+const BODY_RADIUS = '50% 50% 42% 42% / 74% 74% 26% 26%';
+/* Ladybug gets a wider, smoother, lower body so it reads as one rounded shell. */
+const LADYBUG_BODY = { left: 24, top: 240, width: 240, height: 118 };
+const LADYBUG_BODY_RADIUS = '50% 50% 44% 44% / 58% 58% 42% 42%';
 const NECK = { x: HOOD.left + HOOD.size / 2, y: HOOD.top + HOOD.size - 2 };
 
 const EYE_W = 54;
@@ -68,8 +128,9 @@ const EYE_TOP = 40;
 const EYE_LEFT_L = 27;
 const EYE_LEFT_R = 103;
 
-export const Character = ({ mode, expression, className = '', size = 1 }: CharacterProps) => {
+export const Character = ({ mode, expression, className = '', size = 1, avatar = 'lavender' }: CharacterProps) => {
   const resolved: SageExpression = expression ?? expressionForMode(mode);
+  const palette = AVATAR_PALETTES[avatar];
 
   const [tempExpression, setTempExpression] = useState<SageExpression | null>(null);
   const tempTimerRef = useRef<number | null>(null);
@@ -110,7 +171,6 @@ export const Character = ({ mode, expression, className = '', size = 1 }: Charac
   const browYMV = useMotionValue(expressionConfig.browLift);
   const cheekOpacityMV = useMotionValue(expressionConfig.cheek);
   const headTiltMV = useMotionValue(expressionConfig.tilt);
-  const sproutRotateMV = useMotionValue(0);
   const earLeftRotateMV = useMotionValue(17);
   const earRightRotateMV = useMotionValue(-17);
   const bodyRotateMV = useMotionValue(0);
@@ -176,7 +236,6 @@ export const Character = ({ mode, expression, className = '', size = 1 }: Charac
       s.highlightOn += ((e.highlight !== 'none' ? 1 : 0) - s.highlightOn) * k;
 
       breath.set(Math.sin(t * 0.9));
-      sproutRotateMV.set(Math.sin(t * 0.7) * 3);
       bodyRotateMV.set(Math.sin(t * 0.5) * 0.6 * s.sway);
       earLeftRotateMV.set(17 + Math.sin(t * 2.2) * 1.6);
       earRightRotateMV.set(-17 + Math.sin(t * 2.2 + 1.3) * 1.6);
@@ -267,8 +326,10 @@ export const Character = ({ mode, expression, className = '', size = 1 }: Charac
           }}
         >
           <AmbientHalo glowMV={glowMV} />
-          <GroundGlow glowMV={glowMV} />
+          <GroundGlow glowMV={glowMV} redGlow={avatar === 'ladybug'} />
           <Decorations mode={mode} />
+
+          <AvatarBackdrop avatar={avatar} palette={palette} />
 
           <motion.div
             style={{
@@ -276,13 +337,16 @@ export const Character = ({ mode, expression, className = '', size = 1 }: Charac
               inset: 0,
               rotate: headTiltMV,
               transformOrigin: `${NECK.x}px ${NECK.y}px`,
+              zIndex: avatar === 'ladybug' ? 7 : undefined,
             }}
           >
-            <FloppyEar side="left" rotateMV={earLeftRotateMV} />
-            <FloppyEar side="right" rotateMV={earRightRotateMV} />
-            <CatEar side="left" />
-            <CatEar side="right" />
-            <Hood />
+            <AvatarHeadBack
+              avatar={avatar}
+              palette={palette}
+              earLeftRotateMV={earLeftRotateMV}
+              earRightRotateMV={earRightRotateMV}
+            />
+            <Hood palette={palette} avatar={avatar} />
             <Face
               mouth={expressionConfig.mouth}
               highlight={expressionConfig.highlight}
@@ -298,30 +362,37 @@ export const Character = ({ mode, expression, className = '', size = 1 }: Charac
               browYMV={browYMV}
               cheekOpacityMV={cheekOpacityMV}
             />
-            <Sprout rotateMV={sproutRotateMV} />
-            <Star />
+            <AvatarFaceExtras avatar={avatar} />
+            {avatar === 'lavender' && <Star />}
           </motion.div>
 
           <motion.div
             style={{
               position: 'absolute',
-              top: BODY.top,
-              left: BODY.left,
-              width: BODY.width,
-              height: BODY.height,
+              top: avatar === 'ladybug' ? LADYBUG_BODY.top : BODY.top,
+              left: avatar === 'ladybug' ? LADYBUG_BODY.left : BODY.left,
+              width: avatar === 'ladybug' ? LADYBUG_BODY.width : BODY.width,
+              height: avatar === 'ladybug' ? LADYBUG_BODY.height : BODY.height,
               background:
-                'radial-gradient(ellipse at 50% 0%, rgba(255,255,255,0.34) 0%, rgba(255,255,255,0) 30%), radial-gradient(ellipse at 50% 4%, rgba(255,255,255,0.28) 0%, rgba(255,255,255,0) 48%), linear-gradient(180deg, #C4B1E4 0%, var(--sage-hood) 42%, #A690D2 78%, var(--sage-hood-dark) 100%)',
-              borderRadius: '50% 50% 42% 42% / 74% 74% 26% 26%',
+                `radial-gradient(ellipse at 50% 0%, rgba(255,255,255,0.34) 0%, rgba(255,255,255,0) 30%), radial-gradient(ellipse at 50% 4%, rgba(255,255,255,0.28) 0%, rgba(255,255,255,0) 48%), linear-gradient(180deg, ${palette.bodyHi} 0%, ${palette.head} 42%, ${palette.bodyMid} 78%, ${palette.bodyDark} 100%)`,
+              borderRadius: avatar === 'ladybug' ? LADYBUG_BODY_RADIUS : BODY_RADIUS,
               boxShadow:
-                'inset 0 -16px 26px rgba(96,76,160,0.30), inset 7px 0 18px rgba(96,76,160,0.16), inset -7px 0 18px rgba(96,76,160,0.16), 0 10px 24px rgba(0,0,0,0.15)',
+                `inset 0 -16px 26px ${palette.shadow}, inset 7px 0 18px ${palette.shadowSoft}, inset -7px 0 18px ${palette.shadowSoft}, 0 10px 24px rgba(0,0,0,0.15)`,
               transformOrigin: '50% 100%',
               rotate: bodyRotateMV,
               zIndex: 6,
             }}
           >
-            <Paw side="left" />
-            <Paw side="right" />
+            <AvatarBodyPattern avatar={avatar} palette={palette} />
+            {avatar !== 'ladybug' && (
+              <>
+                <Paw side="left" />
+                <Paw side="right" />
+              </>
+            )}
           </motion.div>
+
+          <AvatarFeet avatar={avatar} />
         </motion.div>
       </div>
     </div>
@@ -352,8 +423,20 @@ const AmbientHalo = ({ glowMV }: { glowMV: MotionValue<number> }) => {
   );
 };
 
-const GroundGlow = ({ glowMV }: { glowMV: MotionValue<number> }) => {
+const GroundGlow = ({
+  glowMV,
+  redGlow = false,
+}: {
+  glowMV: MotionValue<number>;
+  redGlow?: boolean;
+}) => {
   const glowOpacity = useTransform(glowMV, (g) => 0.5 + g * 0.5);
+  const outer = redGlow
+    ? 'radial-gradient(ellipse at center, rgba(255,220,214,1) 0%, rgba(255,120,104,0.72) 36%, rgba(232,64,48,0.42) 56%, rgba(232,64,48,0) 80%)'
+    : 'radial-gradient(ellipse at center, rgba(255,230,240,1) 0%, rgba(255,170,205,0.75) 35%, rgba(250,120,175,0.4) 55%, rgba(250,120,175,0) 80%)';
+  const inner = redGlow
+    ? 'radial-gradient(ellipse at center, rgba(255,236,232,1) 0%, rgba(255,140,124,0.62) 50%, rgba(232,64,48,0) 75%)'
+    : 'radial-gradient(ellipse at center, rgba(255,240,246,1) 0%, rgba(255,185,215,0.65) 50%, rgba(250,120,175,0) 75%)';
   return (
     <>
       <motion.div
@@ -364,8 +447,7 @@ const GroundGlow = ({ glowMV }: { glowMV: MotionValue<number> }) => {
           x: '-50%',
           width: 340,
           height: 62,
-          background:
-            'radial-gradient(ellipse at center, rgba(255,230,240,1) 0%, rgba(255,170,205,0.75) 35%, rgba(250,120,175,0.4) 55%, rgba(250,120,175,0) 80%)',
+          background: outer,
           filter: 'blur(8px)',
           zIndex: 0,
           opacity: glowOpacity,
@@ -380,8 +462,7 @@ const GroundGlow = ({ glowMV }: { glowMV: MotionValue<number> }) => {
           x: '-50%',
           width: 230,
           height: 30,
-          background:
-            'radial-gradient(ellipse at center, rgba(255,240,246,1) 0%, rgba(255,185,215,0.65) 50%, rgba(250,120,175,0) 75%)',
+          background: inner,
           filter: 'blur(4px)',
           zIndex: 0,
           opacity: glowOpacity,
@@ -543,7 +624,7 @@ const CatEar = ({ side }: { side: 'left' | 'right' }) => (
   />
 );
 
-const Hood = () => (
+const Hood = ({ palette, avatar }: { palette: AvatarPalette; avatar: SageAvatar }) => (
   <div
     style={{
       position: 'absolute',
@@ -552,13 +633,16 @@ const Hood = () => (
       width: HOOD.size,
       height: HOOD.size,
       background:
-        'radial-gradient(ellipse at 50% 10%, rgba(255,255,255,0.38) 0%, rgba(255,255,255,0) 42%), radial-gradient(circle at 50% 30%, var(--sage-hood-hi) 0%, var(--sage-hood) 48%, #A189CF 84%, var(--sage-hood-dark) 100%)',
+        `radial-gradient(ellipse at 50% 10%, rgba(255,255,255,0.38) 0%, rgba(255,255,255,0) 42%), radial-gradient(circle at 50% 30%, ${palette.headHi} 0%, ${palette.head} 48%, ${palette.headMid} 84%, ${palette.headDark} 100%)`,
       borderRadius: '50%',
       boxShadow:
-        'inset 0 -14px 28px rgba(96,76,160,0.30), inset 0 10px 18px rgba(255,255,255,0.16), inset 0 0 30px rgba(96,76,160,0.22), 0 12px 28px rgba(0,0,0,0.15)',
+        `inset 0 -14px 28px ${palette.shadow}, inset 0 10px 18px rgba(255,255,255,0.16), inset 0 0 30px ${palette.shadowMid}, 0 12px 28px rgba(0,0,0,0.15)`,
       zIndex: 3,
+      overflow: 'hidden',
     }}
-  />
+  >
+    <AvatarHeadPattern avatar={avatar} palette={palette} />
+  </div>
 );
 
 interface FaceProps {
@@ -921,66 +1005,6 @@ const Paw = ({ side }: { side: 'left' | 'right' }) => (
   />
 );
 
-const Sprout = ({
-  rotateMV,
-}: {
-  rotateMV: MotionValue<number>;
-}) => (
-  <motion.div
-    style={{
-      position: 'absolute',
-      top: 36,
-      left: 150,
-      x: '-50%',
-      width: 7,
-      height: 56,
-      transformOrigin: '50% 100%',
-      zIndex: 8,
-      rotate: rotateMV,
-    }}
-  >
-    <div
-      style={{
-        position: 'absolute',
-        bottom: 0,
-        left: 0,
-        width: 7,
-        height: 44,
-        background: 'linear-gradient(180deg, var(--sage-sprout) 0%, var(--sage-sprout-dark) 100%)',
-        borderRadius: 4,
-      }}
-    />
-    <div
-      style={{
-        position: 'absolute',
-        top: 0,
-        left: -19,
-        width: 32,
-        height: 24,
-        background:
-          'radial-gradient(circle at 40% 35%, #A8F0BA 0%, var(--sage-sprout) 55%, var(--sage-sprout-dark) 100%)',
-        borderRadius: '50%',
-        transform: 'rotate(-36deg)',
-        boxShadow: '0 2px 4px rgba(0,0,0,0.08)',
-      }}
-    />
-    <div
-      style={{
-        position: 'absolute',
-        top: 0,
-        right: -19,
-        width: 32,
-        height: 24,
-        background:
-          'radial-gradient(circle at 60% 35%, #A8F0BA 0%, var(--sage-sprout) 55%, var(--sage-sprout-dark) 100%)',
-        borderRadius: '50%',
-        transform: 'rotate(36deg)',
-        boxShadow: '0 2px 4px rgba(0,0,0,0.08)',
-      }}
-    />
-  </motion.div>
-);
-
 const Star = () => (
   <div
     style={{
@@ -998,4 +1022,450 @@ const Star = () => (
       zIndex: 8,
     }}
   />
+);
+
+/* ------------------------------ avatar variants --------------------------- */
+
+interface AvatarPartProps {
+  palette: AvatarPalette;
+}
+
+/** Accessories that sit behind the whole character (tail, wings). */
+const AvatarBackdrop = ({ avatar, palette }: { avatar: SageAvatar } & AvatarPartProps) => {
+  if (avatar === 'cat') return <CatTail palette={palette} />;
+  if (avatar === 'bee') return <BeeWings />;
+  if (avatar === 'ladybug') return <LadybugWings palette={palette} />;
+  return null;
+};
+
+/** Ears / antennae that sit behind the head. Lavender keeps its original parts. */
+const AvatarHeadBack = ({
+  avatar,
+  palette,
+  earLeftRotateMV,
+  earRightRotateMV,
+}: {
+  avatar: SageAvatar;
+  earLeftRotateMV: MotionValue<number>;
+  earRightRotateMV: MotionValue<number>;
+} & AvatarPartProps) => {
+  if (avatar === 'cat') return <CatEars palette={palette} />;
+  if (avatar === 'bee') return <Antennae stemColor="#5A3A1A" tipColor="#FFD23F" />;
+  if (avatar === 'ladybug') return <Antennae stemColor="#181014" tipColor="#E23B34" />;
+  return (
+    <>
+      <FloppyEar side="left" rotateMV={earLeftRotateMV} />
+      <FloppyEar side="right" rotateMV={earRightRotateMV} />
+      <CatEar side="left" />
+      <CatEar side="right" />
+    </>
+  );
+};
+
+/** Pattern painted on the coloured head ring (subtle spots for the ladybug). */
+const AvatarHeadPattern = ({ avatar, palette }: { avatar: SageAvatar } & AvatarPartProps) => {
+  if (avatar !== 'ladybug') return null;
+  const spots = [
+    { left: 60, top: 0, size: 14 },
+    { left: 96, top: -3, size: 15 },
+    { left: 130, top: 0, size: 14 },
+    { left: -2, top: 54, size: 15 },
+    { left: 191, top: 54, size: 15 },
+  ];
+  return (
+    <>
+      {spots.map((s, i) => (
+        <Spot key={i} left={s.left} top={s.top} size={s.size} color={palette.pattern} opacity={0.6} />
+      ))}
+    </>
+  );
+};
+
+/** Details drawn over the face (cat whiskers). */
+const AvatarFaceExtras = ({ avatar }: { avatar: SageAvatar }) => {
+  if (avatar !== 'cat') return null;
+  return <Whiskers color="rgba(150,96,122,0.72)" />;
+};
+
+/** Pattern painted on the body shape (bee stripes, ladybug spots). */
+const AvatarBodyPattern = ({ avatar, palette }: { avatar: SageAvatar } & AvatarPartProps) => {
+  if (avatar === 'bee') {
+    return (
+      <div
+        style={{
+          position: 'absolute',
+          inset: 0,
+          borderRadius: BODY_RADIUS,
+          overflow: 'hidden',
+          zIndex: 0,
+          pointerEvents: 'none',
+        }}
+      >
+        {[0.2, 0.5, 0.8].map((f, i) => (
+          <div
+            key={i}
+            style={{
+              position: 'absolute',
+              left: 0,
+              right: 0,
+              top: `${f * 100}%`,
+              height: '15%',
+              background: palette.pattern,
+              opacity: 0.92,
+            }}
+          />
+        ))}
+      </div>
+    );
+  }
+
+  if (avatar === 'ladybug') {
+    return (
+      <div
+        style={{
+          position: 'absolute',
+          inset: 0,
+          borderRadius: LADYBUG_BODY_RADIUS,
+          overflow: 'hidden',
+          zIndex: 0,
+          pointerEvents: 'none',
+        }}
+      >
+        <Spot left={34} top={28} size={30} color={palette.pattern} />
+        <Spot left={176} top={28} size={30} color={palette.pattern} />
+        <Spot left={20} top={64} size={26} color={palette.pattern} />
+        <Spot left={194} top={64} size={26} color={palette.pattern} />
+        <Spot left={102} top={70} size={34} color={palette.pattern} />
+        <Spot left={60} top={90} size={28} color={palette.pattern} />
+        <Spot left={152} top={90} size={28} color={palette.pattern} />
+      </div>
+    );
+  }
+
+  return null;
+};
+
+const Spot = ({
+  left,
+  top,
+  size,
+  color,
+  opacity = 0.95,
+}: {
+  left: number;
+  top: number;
+  size: number;
+  color: string;
+  opacity?: number;
+}) => (
+  <div
+    style={{
+      position: 'absolute',
+      left,
+      top,
+      width: size,
+      height: size,
+      borderRadius: '50%',
+      background: color,
+      boxShadow: 'inset -2px -2px 4px rgba(0,0,0,0.25)',
+      opacity,
+    }}
+  />
+);
+
+/** Two small cream oval feet at the bottom (ladybug). */
+const AvatarFeet = ({ avatar }: { avatar: SageAvatar }) => {
+  if (avatar !== 'ladybug') return null;
+  return (
+    <>
+      <LadybugFoot left={88} />
+      <LadybugFoot left={146} />
+    </>
+  );
+};
+
+const LadybugFoot = ({ left }: { left: number }) => (
+  <div
+    style={{
+      position: 'absolute',
+      left,
+      bottom: 2,
+      width: 54,
+      height: 30,
+      borderRadius: '50%',
+      background:
+        'radial-gradient(ellipse at 50% 30%, var(--sage-face-hi) 0%, var(--sage-face) 60%, var(--sage-face-shade) 100%)',
+      boxShadow:
+        'inset 0 -3px 6px rgba(176,154,130,0.32), inset 0 2px 3px rgba(255,255,255,0.5), 0 3px 6px rgba(0,0,0,0.12)',
+      zIndex: 7,
+      pointerEvents: 'none',
+    }}
+  />
+);
+
+const CatTail = ({ palette }: AvatarPartProps) => (
+  <svg
+    width={120}
+    height={190}
+    viewBox="0 0 120 190"
+    style={{
+      position: 'absolute',
+      right: 0,
+      bottom: 0,
+      zIndex: 1,
+      overflow: 'visible',
+      pointerEvents: 'none',
+    }}
+    aria-hidden
+  >
+    <path
+      d="M16 184 C 76 186 112 150 108 98 C 106 62 86 42 58 50"
+      fill="none"
+      stroke={palette.head}
+      strokeWidth={30}
+      strokeLinecap="round"
+    />
+    <path
+      d="M18 182 C 74 184 110 148 106 98 C 104 64 86 44 60 52"
+      fill="none"
+      stroke={palette.headHi}
+      strokeWidth={11}
+      strokeLinecap="round"
+      opacity={0.55}
+    />
+  </svg>
+);
+
+const CatEars = ({ palette }: AvatarPartProps) => (
+  <>
+    {(['left', 'right'] as const).map((side) => (
+      <div
+        key={side}
+        style={{
+          position: 'absolute',
+          top: 36,
+          left: side === 'left' ? 62 : 176,
+          width: 62,
+          height: 66,
+          transform: `rotate(${side === 'left' ? -14 : 14}deg)`,
+          transformOrigin: '50% 100%',
+          zIndex: 2,
+          filter: 'drop-shadow(0 3px 4px rgba(150,50,95,0.35))',
+        }}
+      >
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            background: `linear-gradient(180deg, ${palette.headHi} 0%, ${palette.head} 68%, ${palette.headDark} 100%)`,
+            clipPath: 'polygon(50% 0%, 100% 100%, 0% 100%)',
+          }}
+        />
+        <div
+          style={{
+            position: 'absolute',
+            left: '50%',
+            top: '32%',
+            transform: 'translateX(-50%)',
+            width: 26,
+            height: 32,
+            background: palette.earInner,
+            clipPath: 'polygon(50% 0%, 100% 100%, 0% 100%)',
+            opacity: 0.85,
+          }}
+        />
+      </div>
+    ))}
+  </>
+);
+
+const Antennae = ({ stemColor, tipColor }: { stemColor: string; tipColor: string }) => (
+  <>
+    <Antenna x={114} dir={-1} stemColor={stemColor} tipColor={tipColor} />
+    <Antenna x={178} dir={1} stemColor={stemColor} tipColor={tipColor} />
+  </>
+);
+
+const Antenna = ({
+  x,
+  dir,
+  stemColor,
+  tipColor,
+}: {
+  x: number;
+  dir: number;
+  stemColor: string;
+  tipColor: string;
+}) => (
+  <div
+    style={{
+      position: 'absolute',
+      left: x,
+      top: 42,
+      width: 8,
+      height: 66,
+      transformOrigin: '50% 100%',
+      transform: `rotate(${dir * 16}deg)`,
+      zIndex: 2,
+      pointerEvents: 'none',
+    }}
+  >
+    <div
+      style={{
+        position: 'absolute',
+        bottom: 0,
+        left: '50%',
+        transform: 'translateX(-50%)',
+        width: 5,
+        height: 56,
+        background: stemColor,
+        borderRadius: 3,
+      }}
+    />
+    <div
+      style={{
+        position: 'absolute',
+        top: -6,
+        left: '50%',
+        transform: 'translateX(-50%)',
+        width: 20,
+        height: 20,
+        borderRadius: '50%',
+        background: tipColor,
+        border: `3px solid ${stemColor}`,
+        boxShadow: 'inset -3px -3px 5px rgba(0,0,0,0.18)',
+      }}
+    />
+  </div>
+);
+
+const Whiskers = ({ color }: { color: string }) => {
+  const lines: { side: 'l' | 'r'; top: number; rot: number }[] = [
+    { side: 'l', top: 182, rot: -9 },
+    { side: 'l', top: 196, rot: 0 },
+    { side: 'l', top: 210, rot: 9 },
+    { side: 'r', top: 182, rot: 9 },
+    { side: 'r', top: 196, rot: 0 },
+    { side: 'r', top: 210, rot: -9 },
+  ];
+  return (
+    <>
+      {lines.map((ln, i) => (
+        <div
+          key={i}
+          style={{
+            position: 'absolute',
+            left: ln.side === 'l' ? 46 : 196,
+            top: ln.top,
+            width: 58,
+            height: 2.5,
+            borderRadius: 2,
+            background:
+              ln.side === 'l'
+                ? `linear-gradient(90deg, rgba(255,255,255,0) 0%, ${color} 30%, ${color} 100%)`
+                : `linear-gradient(90deg, ${color} 0%, ${color} 70%, rgba(255,255,255,0) 100%)`,
+            transform: `rotate(${ln.rot}deg)`,
+            transformOrigin: ln.side === 'l' ? '100% 50%' : '0% 50%',
+            zIndex: 5,
+            pointerEvents: 'none',
+            opacity: 0.85,
+          }}
+        />
+      ))}
+    </>
+  );
+};
+
+const BeeWings = () => (
+  <>
+    <BeeWing left={16} top={140} rotate={-28} width={82} height={112} origin="70% 70%" />
+    <BeeWing left={34} top={198} rotate={-8} width={72} height={86} origin="70% 30%" />
+    <BeeWing left={202} top={140} rotate={28} width={82} height={112} origin="30% 70%" />
+    <BeeWing left={194} top={198} rotate={8} width={72} height={86} origin="30% 30%" />
+  </>
+);
+
+const BeeWing = ({
+  left,
+  top,
+  rotate,
+  width,
+  height,
+  origin,
+}: {
+  left: number;
+  top: number;
+  rotate: number;
+  width: number;
+  height: number;
+  origin: string;
+}) => (
+  <div
+    style={{
+      position: 'absolute',
+      left,
+      top,
+      width,
+      height,
+      transform: `rotate(${rotate}deg)`,
+      transformOrigin: origin,
+      borderRadius: '50%',
+      background:
+        'radial-gradient(ellipse at 42% 30%, rgba(255,255,255,0.78) 0%, rgba(255,255,255,0.4) 42%, rgba(206,233,255,0.22) 72%, rgba(206,233,255,0.06) 100%)',
+      border: '2px solid rgba(255,255,255,0.55)',
+      boxShadow: 'inset 0 0 18px rgba(255,255,255,0.5)',
+      zIndex: 1,
+      pointerEvents: 'none',
+    }}
+  />
+);
+
+const LadybugWings = ({ palette }: AvatarPartProps) => (
+  <>
+    <LadybugWing left={0} top={246} rotate={-14} origin="72% 58%" palette={palette} />
+    <LadybugWing left={192} top={246} rotate={14} origin="28% 58%" palette={palette} />
+  </>
+);
+
+const LadybugWing = ({
+  left,
+  top,
+  rotate,
+  origin,
+  palette,
+}: {
+  left: number;
+  top: number;
+  rotate: number;
+  origin: string;
+} & AvatarPartProps) => (
+  <div
+    style={{
+      position: 'absolute',
+      left,
+      top,
+      width: 96,
+      height: 104,
+      transform: `rotate(${rotate}deg)`,
+      transformOrigin: origin,
+      zIndex: 1,
+      pointerEvents: 'none',
+    }}
+  >
+    <div
+      style={{
+        position: 'absolute',
+        inset: 0,
+        borderRadius: '50% 50% 46% 46% / 54% 54% 46% 46%',
+        overflow: 'hidden',
+        background: `radial-gradient(ellipse at 50% 20%, ${palette.headHi} 0%, ${palette.head} 56%, ${palette.headDark} 100%)`,
+        boxShadow: `inset 0 -8px 16px ${palette.shadow}, 0 8px 16px rgba(0,0,0,0.18)`,
+        border: `2px solid ${palette.headDark}`,
+      }}
+    >
+      <Spot left={16} top={16} size={24} color={palette.pattern} />
+      <Spot left={52} top={44} size={22} color={palette.pattern} />
+      <Spot left={22} top={62} size={18} color={palette.pattern} />
+    </div>
+  </div>
 );
