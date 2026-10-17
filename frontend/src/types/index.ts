@@ -38,36 +38,40 @@ export const MODE_BUTTONS: ModeButtonConfig[] = [
     label: 'Focus',
     subtitle: 'Stay on track',
     icon: '🌿',
-    color: '#a8e6cf',
-    gradient: 'linear-gradient(135deg, rgba(168,230,207,0.18) 0%, rgba(110,207,138,0.08) 100%)',
-    glowColor: 'rgba(168,230,207,0.35)',
+    color: '#4dffb8',
+    gradient:
+      'linear-gradient(135deg, rgba(26, 58, 42, 0.95) 0%, rgba(42, 78, 58, 0.85) 40%, rgba(88, 140, 110, 0.7) 100%)',
+    glowColor: 'rgba(77, 255, 184, 0.45)',
   },
   {
     id: 'companion',
     label: 'Companion',
     subtitle: 'Think out loud',
     icon: '💜',
-    color: '#ffb3a7',
-    gradient: 'linear-gradient(135deg, rgba(255,179,167,0.18) 0%, rgba(255,154,140,0.08) 100%)',
-    glowColor: 'rgba(255,179,167,0.35)',
+    color: '#ff7ebd',
+    gradient:
+      'linear-gradient(135deg, rgba(48, 24, 60, 0.95) 0%, rgba(72, 32, 84, 0.85) 40%, rgba(110, 52, 120, 0.7) 100%)',
+    glowColor: 'rgba(255, 126, 189, 0.45)',
   },
   {
     id: 'calm',
     label: 'Calm',
     subtitle: 'Feel better',
     icon: '🌙',
-    color: '#c5b4e3',
-    gradient: 'linear-gradient(135deg, rgba(197,180,227,0.18) 0%, rgba(168,148,209,0.08) 100%)',
-    glowColor: 'rgba(197,180,227,0.35)',
+    color: '#d4bfff',
+    gradient:
+      'linear-gradient(135deg, rgba(38, 26, 56, 0.95) 0%, rgba(58, 38, 82, 0.85) 40%, rgba(90, 64, 120, 0.7) 100%)',
+    glowColor: 'rgba(212, 191, 255, 0.45)',
   },
   {
     id: 'plan',
     label: 'Plan',
     subtitle: 'Get started',
     icon: '✨',
-    color: '#ffd166',
-    gradient: 'linear-gradient(135deg, rgba(255,209,102,0.18) 0%, rgba(240,180,41,0.08) 100%)',
-    glowColor: 'rgba(255,209,102,0.35)',
+    color: '#ffd78a',
+    gradient:
+      'linear-gradient(135deg, rgba(42, 32, 22, 0.95) 0%, rgba(68, 48, 28, 0.85) 40%, rgba(110, 76, 38, 0.7) 100%)',
+    glowColor: 'rgba(255, 215, 138, 0.45)',
   },
 ];
 
