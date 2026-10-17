@@ -1,5 +1,5 @@
 import { motion, useMotionValue, useTransform, type MotionValue } from 'motion/react';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { SageMode, SageExpression } from '../../types';
 
 export type SageAvatar = 'lavender' | 'cat' | 'bee' | 'ladybug';
@@ -68,7 +68,7 @@ const AVATAR_PALETTES: Record<SageAvatar, AvatarPalette> = {
 interface ExpressionConfig {
   eyeOpen: number;
   highlight: 'round' | 'star' | 'none';
-  mouth: 'smile' | 'open' | 'calm' | 'o';
+  mouth: 'smile' | 'open' | 'calm' | 'o' | 'laugh';
   cheek: number;
   eyeScaleY: number;
   eyeOffsetY: number;
@@ -85,6 +85,23 @@ const EXPRESSIONS: Record<SageExpression, ExpressionConfig> = {
   excited: { eyeOpen: 1, highlight: 'star',  mouth: 'open',  cheek: 0.95, eyeScaleY: 1.12, eyeOffsetY: -1, browLift: -3, browRot: -12, tilt: 0,  sway: 1.4, blinkRate: 0.8 },
   calm:    { eyeOpen: 0, highlight: 'none',  mouth: 'calm',  cheek: 0.55, eyeScaleY: 1,    eyeOffsetY: 0,  browLift: 1,  browRot: -3,  tilt: 0,  sway: 0.5, blinkRate: 0.5 },
   curious: { eyeOpen: 1, highlight: 'round', mouth: 'o',     cheek: 0.5,  eyeScaleY: 1.05, eyeOffsetY: -4, browLift: -5, browRot: -8,  tilt: -5, sway: 0.7, blinkRate: 1 },
+};
+
+/* Cute giggle (see design_references/Giggle expressions.png):
+   closed happy crescent eyes (^‿^), rosy cheeks, wide open laughing mouth,
+   with paws pulled up to the tummy while Sage bounces and wiggles. */
+const GIGGLE_EXPRESSION: ExpressionConfig = {
+  eyeOpen: 0,
+  highlight: 'none',
+  mouth: 'laugh',
+  cheek: 1,
+  eyeScaleY: 1,
+  eyeOffsetY: 0,
+  browLift: -2,
+  browRot: -14,
+  tilt: 0,
+  sway: 2,
+  blinkRate: 0,
 };
 
 const MODE_EXPRESSION: Record<SageMode, SageExpression> = {
@@ -135,6 +152,44 @@ export const Character = ({ mode, expression, className = '', size = 1, avatar =
   const [tempExpression, setTempExpression] = useState<SageExpression | null>(null);
   const tempTimerRef = useRef<number | null>(null);
 
+  const [giggling, setGiggling] = useState(false);
+  const giggleRef = useRef({ active: false });
+  const giggleTimerRef = useRef<number | null>(null);
+  const giggleAudioRef = useRef<HTMLAudioElement | null>(null);
+
+  /** Click/tap anywhere on Sage to giggle. Ignores rapid re-clicks while active. */
+  const startGiggle = useCallback(() => {
+    if (giggleRef.current.active) return;
+    giggleRef.current.active = true;
+    setGiggling(true);
+
+    if (typeof window !== 'undefined') {
+      try {
+        const audio = giggleAudioRef.current ?? new Audio('/audio/sage_giggle.wav');
+        giggleAudioRef.current = audio;
+        audio.currentTime = 0;
+        audio.volume = 0.6;
+        void audio.play().catch(() => {});
+      } catch {
+        /* audio is best-effort */
+      }
+    }
+
+    if (giggleTimerRef.current) window.clearTimeout(giggleTimerRef.current);
+    giggleTimerRef.current = window.setTimeout(() => {
+      giggleRef.current.active = false;
+      setGiggling(false);
+      giggleTimerRef.current = null;
+    }, 1600);
+  }, []);
+
+  useEffect(
+    () => () => {
+      if (giggleTimerRef.current) window.clearTimeout(giggleTimerRef.current);
+    },
+    [],
+  );
+
   useEffect(() => {
     if (tempTimerRef.current) {
       window.clearTimeout(tempTimerRef.current);
@@ -155,11 +210,14 @@ export const Character = ({ mode, expression, className = '', size = 1, avatar =
   }, [mode]);
 
   const activeExpression: SageExpression = tempExpression ?? resolved;
-  const expressionConfig = EXPRESSIONS[activeExpression];
+  const expressionConfig = giggling ? GIGGLE_EXPRESSION : EXPRESSIONS[activeExpression];
   const exprRef = useRef(expressionConfig);
   exprRef.current = expressionConfig;
 
   const breath = useMotionValue(0);
+  const giggleYMV = useMotionValue(0);
+  const giggleRotMV = useMotionValue(0);
+  const giggleAmountMV = useMotionValue(0);
   const eyeOpenMV = useMotionValue(expressionConfig.eyeOpen);
 
   const eyeWidthMV = useMotionValue(EYE_W);
@@ -195,6 +253,7 @@ export const Character = ({ mode, expression, className = '', size = 1, avatar =
     blinkRate: expressionConfig.blinkRate,
     highlightOn: expressionConfig.highlight !== 'none' ? 1 : 0,
     glow: MODE_GLOW[mode] ?? 0.7,
+    giggle: 0,
   });
 
   const blinkRef = useRef({ next: 0, closing: false, start: 0 });
@@ -285,6 +344,9 @@ export const Character = ({ mode, expression, className = '', size = 1, avatar =
       glowMV.set(MODE_GLOW[modeRef.current] ?? 0.7);
       gazeXMV.set(0);
       gazeYMV.set(0);
+      giggleYMV.set(0);
+      giggleRotMV.set(0);
+      giggleAmountMV.set(0);
       return;
     }
 
@@ -350,6 +412,12 @@ export const Character = ({ mode, expression, className = '', size = 1, avatar =
       cheekOpacityMV.set(s.cheek);
       headTiltMV.set(s.tilt + Math.sin(t * 0.35) * 1.3 * s.sway);
 
+      // Giggle bounce + wiggle (eased in and back out for a smooth return).
+      s.giggle += ((giggleRef.current.active ? 1 : 0) - s.giggle) * 0.14;
+      giggleYMV.set(-Math.abs(Math.sin(t * 13)) * 7 * s.giggle);
+      giggleRotMV.set(Math.sin(t * 17) * 6 * s.giggle);
+      giggleAmountMV.set(s.giggle);
+
       // Mode-aware ambient glow. Brightens while the excited flash is active
       // (e.g. Plan task completion), then settles back to the mode level.
       const glowTarget = Math.min(
@@ -375,11 +443,23 @@ export const Character = ({ mode, expression, className = '', size = 1, avatar =
     <div
       ref={rootRef}
       className={`sage-character ${className}`}
+      role="button"
+      tabIndex={0}
+      aria-label="Giggle"
+      onClick={startGiggle}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          startGiggle();
+        }
+      }}
       style={{
         position: 'relative',
         width: `calc(${BASE_W}px * var(--sage-char-scale, 1))`,
         height: `calc(${BASE_H}px * var(--sage-char-scale, 1))`,
         flexShrink: 0,
+        cursor: 'pointer',
+        WebkitTapHighlightColor: 'transparent',
       }}
     >
       <div
@@ -406,6 +486,15 @@ export const Character = ({ mode, expression, className = '', size = 1, avatar =
             transformOrigin: 'center bottom',
           }}
         >
+          <motion.div
+            style={{
+              position: 'absolute',
+              inset: 0,
+              y: giggleYMV,
+              rotate: giggleRotMV,
+              transformOrigin: 'center bottom',
+            }}
+          >
           <AmbientHalo glowMV={glowMV} />
           <GroundGlow glowMV={glowMV} redGlow={avatar === 'ladybug'} />
           <Decorations mode={mode} />
@@ -444,6 +533,7 @@ export const Character = ({ mode, expression, className = '', size = 1, avatar =
               browRotateMV={browRotateMV}
               browYMV={browYMV}
               cheekOpacityMV={cheekOpacityMV}
+              giggleMV={giggleAmountMV}
             />
             <AvatarFaceExtras avatar={avatar} />
             {avatar === 'lavender' && <Star />}
@@ -469,13 +559,15 @@ export const Character = ({ mode, expression, className = '', size = 1, avatar =
             <AvatarBodyPattern avatar={avatar} palette={palette} />
             {avatar !== 'ladybug' && (
               <>
-                <Paw side="left" />
-                <Paw side="right" />
+                <Paw side="left" giggleMV={giggleAmountMV} />
+                <Paw side="right" giggleMV={giggleAmountMV} />
               </>
             )}
           </motion.div>
 
           <AvatarFeet avatar={avatar} />
+          {giggling && <GiggleFx />}
+          </motion.div>
         </motion.div>
       </div>
     </div>
@@ -658,6 +750,85 @@ const Decorations = ({ mode }: { mode: SageMode }) => {
   );
 };
 
+/* Tiny hearts + sparkles that float up while Sage giggles. */
+const GIGGLE_FX: { kind: 'heart' | 'spark'; left: number; top: number; size: number; dur: number; delay: number }[] = [
+  { kind: 'heart', left: 92, top: 44, size: 16, dur: 1.3, delay: 0 },
+  { kind: 'heart', left: 198, top: 66, size: 13, dur: 1.4, delay: 0.18 },
+  { kind: 'spark', left: 132, top: 22, size: 12, dur: 1.2, delay: 0.08 },
+  { kind: 'spark', left: 170, top: 100, size: 10, dur: 1.35, delay: 0.3 },
+  { kind: 'heart', left: 118, top: 132, size: 11, dur: 1.5, delay: 0.42 },
+  { kind: 'spark', left: 58, top: 98, size: 9, dur: 1.3, delay: 0.5 },
+];
+
+/* Motion arcs flanking Sage, echoing the reference giggle animation. */
+const GIGGLE_ARCS: { left: number; top: number; size: number; dur: number; delay: number; flip: boolean }[] = [
+  { left: 34, top: 150, size: 20, dur: 0.9, delay: 0, flip: false },
+  { left: 246, top: 150, size: 20, dur: 0.95, delay: 0.12, flip: true },
+];
+
+const GiggleFx = () => (
+  <div
+    aria-hidden
+    style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 8 }}
+  >
+    {GIGGLE_FX.map((f, i) => {
+      const heart = f.kind === 'heart';
+      const color = heart ? '#ff9ec4' : '#ffe08a';
+      return (
+        <span
+          key={i}
+          className="sage-giggle-fx"
+          style={{
+            position: 'absolute',
+            left: f.left,
+            top: f.top,
+            fontSize: f.size,
+            lineHeight: 1,
+            color,
+            textShadow: `0 0 6px ${heart ? 'rgba(255,158,196,0.85)' : 'rgba(255,224,138,0.85)'}`,
+            animationDelay: `${f.delay}s`,
+            animationDuration: `${f.dur}s`,
+          }}
+        >
+          {heart ? '♥' : '✦'}
+        </span>
+      );
+    })}
+    {GIGGLE_ARCS.map((a, i) => (
+      <svg
+        key={`arc-${i}`}
+        className="sage-giggle-arc"
+        width={a.size}
+        height={a.size}
+        viewBox="0 0 20 20"
+        style={{
+          position: 'absolute',
+          left: a.left,
+          top: a.top,
+          transform: a.flip ? 'scaleX(-1)' : undefined,
+          animationDelay: `${a.delay}s`,
+          animationDuration: `${a.dur}s`,
+        }}
+      >
+        <path
+          d="M2 16 Q 7 3 12 16"
+          fill="none"
+          stroke="#ffe6a8"
+          strokeWidth="2.4"
+          strokeLinecap="round"
+        />
+        <path
+          d="M9 16 Q 14 3 19 16"
+          fill="none"
+          stroke="#ffe6a8"
+          strokeWidth="2.4"
+          strokeLinecap="round"
+        />
+      </svg>
+    ))}
+  </div>
+);
+
 const FloppyEar = ({
   side,
   rotateMV,
@@ -744,6 +915,7 @@ interface FaceProps {
   browRotateMV: MotionValue<number>;
   browYMV: MotionValue<number>;
   cheekOpacityMV: MotionValue<number>;
+  giggleMV: MotionValue<number>;
 }
 
 const Face = ({
@@ -762,6 +934,7 @@ const Face = ({
   browRotateMV,
   browYMV,
   cheekOpacityMV,
+  giggleMV,
 }: FaceProps) => (
   <div
     style={{
@@ -808,8 +981,8 @@ const Face = ({
       browRotateMV={browRotateMV}
       browYMV={browYMV}
     />
-    <Cheek side="left" opacityMV={cheekOpacityMV} />
-    <Cheek side="right" opacityMV={cheekOpacityMV} />
+    <Cheek side="left" opacityMV={cheekOpacityMV} giggleMV={giggleMV} />
+    <Cheek side="right" opacityMV={cheekOpacityMV} giggleMV={giggleMV} />
     <Mouth type={mouth} />
   </div>
 );
@@ -1005,26 +1178,38 @@ const Eye = ({
 const Cheek = ({
   side,
   opacityMV,
+  giggleMV,
 }: {
   side: 'left' | 'right';
   opacityMV: MotionValue<number>;
-}) => (
-  <motion.div
-    style={{
-      position: 'absolute',
-      top: 98,
-      left: side === 'left' ? 16 : 122,
-      width: 46,
-      height: 36,
-      background:
-        'radial-gradient(ellipse at center, var(--sage-blush) 0%, rgba(255,199,216,0.55) 45%, rgba(255,199,216,0) 72%)',
-      borderRadius: '50%',
-      filter: 'blur(5px)',
-      opacity: opacityMV,
-      zIndex: 3,
-    }}
-  />
-);
+  giggleMV: MotionValue<number>;
+}) => {
+  // Cheeks grow a little rosier and larger while giggling (see reference).
+  const scale = useTransform(giggleMV, (g) => 1 + g * 0.4);
+  const strength = useTransform(
+    [opacityMV, giggleMV],
+    (latest: number[]) => Math.min(1, latest[0] + latest[1] * 0.4),
+  );
+  return (
+    <motion.div
+      style={{
+        position: 'absolute',
+        top: 98,
+        left: side === 'left' ? 16 : 122,
+        width: 46,
+        height: 36,
+        background:
+          'radial-gradient(ellipse at center, var(--sage-blush) 0%, rgba(255,150,185,0.7) 46%, rgba(255,199,216,0) 74%)',
+        borderRadius: '50%',
+        filter: 'blur(5px)',
+        scale,
+        transformOrigin: 'center',
+        opacity: strength,
+        zIndex: 3,
+      }}
+    />
+  );
+};
 
 const Mouth = ({ type }: { type: ExpressionConfig['mouth'] }) => {
   const base: React.CSSProperties = {
@@ -1059,6 +1244,37 @@ const Mouth = ({ type }: { type: ExpressionConfig['mouth'] }) => {
             height: 12,
             background: 'linear-gradient(180deg, #FF9FB2 0%, #F27E97 100%)',
             borderRadius: '0 0 50% 50%',
+          }}
+        />
+      </div>
+    );
+  }
+
+  if (type === 'laugh') {
+    return (
+      <div
+        style={{
+          ...base,
+          top: 116,
+          width: 44,
+          height: 34,
+          background:
+            'radial-gradient(ellipse at 50% 28%, #C24A63 0%, #A83250 58%, #8E2742 100%)',
+          borderRadius: '46% 46% 50% 50% / 42% 42% 60% 60%',
+          boxShadow: 'inset 0 3px 6px rgba(0,0,0,0.28)',
+          overflow: 'hidden',
+        }}
+      >
+        <div
+          style={{
+            position: 'absolute',
+            bottom: -2,
+            left: '50%',
+            transform: 'translateX(-50%)',
+            width: 32,
+            height: 17,
+            background: 'linear-gradient(180deg, #FF8FA8 0%, #F26D8E 100%)',
+            borderRadius: '50% 50% 0 0',
           }}
         />
       </div>
@@ -1112,20 +1328,35 @@ const Mouth = ({ type }: { type: ExpressionConfig['mouth'] }) => {
   );
 };
 
-const Paw = ({ side }: { side: 'left' | 'right' }) => (
-  <div
-    style={{
-      position: 'absolute',
-      bottom: 0,
-      left: side === 'left' ? 45 : 153,
-      width: 54,
-      height: 30,
-      background: 'linear-gradient(180deg, var(--sage-face-hi) 0%, var(--sage-face) 55%, var(--sage-face-shade) 100%)',
-      borderRadius: '50% 50% 36% 36% / 94% 94% 10% 10%',
-      boxShadow: 'inset 0 -3px 6px rgba(176,154,130,0.28), inset 0 2px 3px rgba(255,255,255,0.5), 0 3px 6px rgba(0,0,0,0.10)',
-    }}
-  />
-);
+const Paw = ({
+  side,
+  giggleMV,
+}: {
+  side: 'left' | 'right';
+  giggleMV: MotionValue<number>;
+}) => {
+  // Paws lift up onto the tummy while giggling.
+  const y = useTransform(giggleMV, (g) => -g * 54);
+  const x = useTransform(giggleMV, (g) => (side === 'left' ? 1 : -1) * g * 10);
+  return (
+    <motion.div
+      style={{
+        position: 'absolute',
+        bottom: 0,
+        left: side === 'left' ? 45 : 153,
+        width: 54,
+        height: 30,
+        background:
+          'linear-gradient(180deg, var(--sage-face-hi) 0%, var(--sage-face) 55%, var(--sage-face-shade) 100%)',
+        borderRadius: '50% 50% 36% 36% / 94% 94% 10% 10%',
+        boxShadow:
+          'inset 0 -3px 6px rgba(176,154,130,0.28), inset 0 2px 3px rgba(255,255,255,0.5), 0 3px 6px rgba(0,0,0,0.10)',
+        y,
+        x,
+      }}
+    />
+  );
+};
 
 const Star = () => (
   <div
