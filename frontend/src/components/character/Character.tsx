@@ -10,6 +10,17 @@ export const AVATAR_ORDER: SageAvatar[] = ['bee', 'cat', 'lavender', 'ladybug'];
 export const nextAvatar = (current: SageAvatar): SageAvatar =>
   AVATAR_ORDER[(AVATAR_ORDER.indexOf(current) + 1) % AVATAR_ORDER.length];
 
+/** How long a giggle animation lasts (ms) — the sound is clipped to this. */
+export const GIGGLE_DURATION = 1600;
+
+/** Mode-specific giggle sound (one per Sage avatar / mode). */
+const GIGGLE_SOUNDS: Record<SageAvatar, string> = {
+  bee: '/audio/bee_audio.mp3',
+  cat: '/audio/cat_audio.mp3',
+  lavender: '/audio/bunny_audio.mp3',
+  ladybug: '/audio/ladybug_giggle.mp3',
+};
+
 interface CharacterProps {
   mode: SageMode;
   expression?: SageExpression;
@@ -156,6 +167,23 @@ export const Character = ({ mode, expression, className = '', size = 1, avatar =
   const giggleRef = useRef({ active: false });
   const giggleTimerRef = useRef<number | null>(null);
   const giggleAudioRef = useRef<HTMLAudioElement | null>(null);
+  const giggleSrcRef = useRef<string | null>(null);
+
+  /* Keep the latest avatar available inside the stable startGiggle callback. */
+  const avatarRef = useRef(avatar);
+  avatarRef.current = avatar;
+
+  /** Stop and rewind the giggle sound (used at animation end / mode switch). */
+  const stopGiggleAudio = useCallback(() => {
+    const audio = giggleAudioRef.current;
+    if (!audio) return;
+    audio.pause();
+    try {
+      audio.currentTime = 0;
+    } catch {
+      /* ignore */
+    }
+  }, []);
 
   /** Click/tap anywhere on Sage to giggle. Ignores rapid re-clicks while active. */
   const startGiggle = useCallback(() => {
@@ -165,10 +193,19 @@ export const Character = ({ mode, expression, className = '', size = 1, avatar =
 
     if (typeof window !== 'undefined') {
       try {
-        const audio = giggleAudioRef.current ?? new Audio('/audio/sage_giggle.wav');
-        giggleAudioRef.current = audio;
+        let audio = giggleAudioRef.current;
+        if (!audio) {
+          audio = new Audio();
+          audio.preload = 'auto';
+          audio.volume = 0.6;
+          giggleAudioRef.current = audio;
+        }
+        const src = GIGGLE_SOUNDS[avatarRef.current] ?? GIGGLE_SOUNDS.bee;
+        if (giggleSrcRef.current !== src) {
+          audio.src = src;
+          giggleSrcRef.current = src;
+        }
         audio.currentTime = 0;
-        audio.volume = 0.6;
         void audio.play().catch(() => {});
       } catch {
         /* audio is best-effort */
@@ -180,14 +217,22 @@ export const Character = ({ mode, expression, className = '', size = 1, avatar =
       giggleRef.current.active = false;
       setGiggling(false);
       giggleTimerRef.current = null;
-    }, 1600);
-  }, []);
+      /* Clip the sound to the animation — never let it outlive the giggle. */
+      stopGiggleAudio();
+    }, GIGGLE_DURATION);
+  }, [stopGiggleAudio]);
+
+  /* Stop any giggle sound the moment the mode/avatar switches. */
+  useEffect(() => {
+    stopGiggleAudio();
+  }, [avatar, stopGiggleAudio]);
 
   useEffect(
     () => () => {
       if (giggleTimerRef.current) window.clearTimeout(giggleTimerRef.current);
+      stopGiggleAudio();
     },
-    [],
+    [stopGiggleAudio],
   );
 
   useEffect(() => {
@@ -557,6 +602,7 @@ export const Character = ({ mode, expression, className = '', size = 1, avatar =
             }}
           >
             <AvatarBodyPattern avatar={avatar} palette={palette} />
+            {avatar === 'lavender' && <BunnyCarrot />}
             {avatar !== 'ladybug' && (
               <>
                 <Paw side="left" giggleMV={giggleAmountMV} />
@@ -827,55 +873,6 @@ const GiggleFx = () => (
       </svg>
     ))}
   </div>
-);
-
-const FloppyEar = ({
-  side,
-  rotateMV,
-}: {
-  side: 'left' | 'right';
-  rotateMV: MotionValue<number>;
-}) => (
-  <motion.div
-    style={{
-      position: 'absolute',
-      top: 126,
-      left: side === 'left' ? 43 : 195,
-      width: 62,
-      height: 138,
-      background:
-        side === 'left'
-          ? 'radial-gradient(ellipse at 42% 35%, var(--sage-face-hi) 0%, var(--sage-face) 55%, var(--sage-face-shade) 100%)'
-          : 'radial-gradient(ellipse at 58% 35%, var(--sage-face-hi) 0%, var(--sage-face) 55%, var(--sage-face-shade) 100%)',
-      borderRadius: '50% 50% 44% 44% / 56% 56% 44% 44%',
-      boxShadow:
-        side === 'left'
-          ? 'inset -7px 2px 12px rgba(176,154,130,0.22), inset 3px 0 8px rgba(143,122,214,0.14), 0 6px 14px rgba(0,0,0,0.10)'
-          : 'inset 7px 2px 12px rgba(176,154,130,0.22), inset -3px 0 8px rgba(143,122,214,0.14), 0 6px 14px rgba(0,0,0,0.10)',
-      transformOrigin: '50% 6%',
-      zIndex: 1,
-      rotate: rotateMV,
-    }}
-  />
-);
-
-const CatEar = ({ side }: { side: 'left' | 'right' }) => (
-  <div
-    style={{
-      position: 'absolute',
-      top: 40,
-      left: side === 'left' ? 68 : 180,
-      width: 0,
-      height: 0,
-      borderLeft: '26px solid transparent',
-      borderRight: '26px solid transparent',
-      borderBottom: `54px solid var(--sage-cat-ear)`,
-      transform: `rotate(${side === 'left' ? -12 : 12}deg)`,
-      transformOrigin: '50% 100%',
-      filter: 'drop-shadow(0 3px 4px rgba(60,40,110,0.40))',
-      zIndex: 2,
-    }}
-  />
 );
 
 const Hood = ({ palette, avatar }: { palette: AvatarPalette; avatar: SageAvatar }) => (
@@ -1405,13 +1402,13 @@ const AvatarHeadBack = ({
   if (avatar === 'cat') return <CatEars palette={palette} />;
   if (avatar === 'bee') return <Antennae stemColor="#5A3A1A" tipColor="#FFD23F" />;
   if (avatar === 'ladybug') return <Antennae stemColor="#181014" tipColor="#E23B34" />;
+  // Mode 3 — Bunny Sage: long floppy ears (ensors merged with head back).
   return (
-    <>
-      <FloppyEar side="left" rotateMV={earLeftRotateMV} />
-      <FloppyEar side="right" rotateMV={earRightRotateMV} />
-      <CatEar side="left" />
-      <CatEar side="right" />
-    </>
+    <BunnyEars
+      palette={palette}
+      earLeftRotateMV={earLeftRotateMV}
+      earRightRotateMV={earRightRotateMV}
+    />
   );
 };
 
@@ -1436,8 +1433,8 @@ const AvatarHeadPattern = ({ avatar, palette }: { avatar: SageAvatar } & AvatarP
 
 /** Details drawn over the face (cat whiskers). */
 const AvatarFaceExtras = ({ avatar }: { avatar: SageAvatar }) => {
-  if (avatar !== 'cat') return null;
-  return <Whiskers color="rgba(150,96,122,0.72)" />;
+  if (avatar === 'cat') return <Whiskers color="rgba(150,96,122,0.72)" />;
+  return null;
 };
 
 /** Pattern painted on the body shape (bee stripes, ladybug spots). */
@@ -1820,5 +1817,158 @@ const LadybugWing = ({
       <Spot left={52} top={44} size={22} color={palette.pattern} />
       <Spot left={22} top={62} size={18} color={palette.pattern} />
     </div>
+  </div>
+);
+
+/* ------------------------------------------------------------------ *
+ * Mode 3 — Bunny Sage (purple): long floppy ears, two front teeth
+ * and a carrot held between the paws. All built from simple shapes.
+ * ------------------------------------------------------------------ */
+
+const BunnyEars = ({
+  palette,
+  earLeftRotateMV,
+  earRightRotateMV,
+}: {
+  palette: AvatarPalette;
+  earLeftRotateMV: MotionValue<number>;
+  earRightRotateMV: MotionValue<number>;
+}) => (
+  <>
+    <BunnyEar side="left" rotateMV={earLeftRotateMV} palette={palette} />
+    <BunnyEar side="right" rotateMV={earRightRotateMV} palette={palette} />
+  </>
+);
+
+const BunnyEar = ({
+  side,
+  rotateMV,
+  palette,
+}: {
+  side: 'left' | 'right';
+  rotateMV: MotionValue<number>;
+  palette: AvatarPalette;
+}) => {
+  const wiggle = useTransform(rotateMV, (v) => (v - 17) * 0.7);
+  return (
+    <div
+      style={{
+        position: 'absolute',
+        top: 0,
+        left: side === 'left' ? 50 : 184,
+        width: 68,
+        height: 170,
+        transform: `rotate(${side === 'left' ? -18 : 18}deg)`,
+        transformOrigin: '50% 94%',
+        zIndex: 2,
+        pointerEvents: 'none',
+        filter: `drop-shadow(0 6px 10px ${palette.shadow})`,
+      }}
+    >
+      <motion.div
+        style={{
+          position: 'absolute',
+          inset: 0,
+          rotate: wiggle,
+          transformOrigin: '50% 94%',
+        }}
+      >
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            borderRadius: '46% 46% 50% 50% / 60% 60% 40% 40%',
+            background: `linear-gradient(180deg, ${palette.headHi} 0%, ${palette.head} 54%, ${palette.headDark} 100%)`,
+            boxShadow: `inset 0 -12px 22px ${palette.shadow}`,
+          }}
+        />
+        <div
+          style={{
+            position: 'absolute',
+            left: '50%',
+            top: '13%',
+            transform: 'translateX(-50%)',
+            width: 32,
+            height: 116,
+            borderRadius: '50% 50% 46% 46% / 58% 58% 42% 42%',
+            background:
+              'linear-gradient(180deg, var(--sage-face-hi) 0%, var(--sage-face) 74%, var(--sage-face-shade) 100%)',
+            opacity: 0.95,
+          }}
+        />
+      </motion.div>
+    </div>
+  );
+};
+
+const BunnyCarrot = () => (
+  <div
+    style={{
+      position: 'absolute',
+      left: 92,
+      bottom: 12,
+      width: 54,
+      height: 80,
+      transform: 'rotate(40deg)',
+      transformOrigin: '50% 55%',
+      zIndex: 1,
+      pointerEvents: 'none',
+    }}
+  >
+    {[
+      { rot: -24, h: 32, from: '#7BD86A', to: '#3FA84A' },
+      { rot: 0, h: 36, from: '#8CE07A', to: '#46B252' },
+      { rot: 24, h: 32, from: '#7BD86A', to: '#3FA84A' },
+    ].map((leaf, i) => (
+      <div
+        key={i}
+        style={{
+          position: 'absolute',
+          left: '50%',
+          top: 0,
+          width: 15,
+          height: leaf.h,
+          transform: `translateX(-50%) rotate(${leaf.rot}deg)`,
+          transformOrigin: '50% 100%',
+          borderRadius: '50% 50% 50% 50% / 72% 72% 34% 34%',
+          background: `linear-gradient(180deg, ${leaf.from} 0%, ${leaf.to} 100%)`,
+          boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+        }}
+      />
+    ))}
+    <div
+      style={{
+        position: 'absolute',
+        left: '50%',
+        top: 26,
+        transform: 'translateX(-50%)',
+        width: 44,
+        height: 54,
+        borderRadius: '44% 44% 48% 48% / 24% 24% 76% 76%',
+        background:
+          'linear-gradient(90deg, #F28321 0%, #FFA641 46%, #E8761B 100%)',
+        boxShadow:
+          'inset -4px 0 9px rgba(150,60,0,0.34), inset 4px 0 9px rgba(255,220,170,0.34), 0 2px 5px rgba(0,0,0,0.18)',
+      }}
+    />
+    {[
+      { top: 40, w: 26, rot: 6 },
+      { top: 52, w: 21, rot: -5 },
+      { top: 64, w: 14, rot: 5 },
+    ].map((rib, i) => (
+      <div
+        key={i}
+        style={{
+          position: 'absolute',
+          left: '50%',
+          top: rib.top,
+          width: rib.w,
+          height: 3,
+          transform: `translateX(-50%) rotate(${rib.rot}deg)`,
+          borderRadius: 2,
+          background: 'rgba(255,236,205,0.55)',
+        }}
+      />
+    ))}
   </div>
 );
