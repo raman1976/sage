@@ -23,6 +23,14 @@ interface MainScreenProps {
   isConnected: boolean;
 }
 
+/** "Sage!" heading color, matched to the selected character avatar. */
+const AVATAR_HEADING_COLORS: Record<SageAvatar, string> = {
+  lavender: '#b9a1dd', // purple
+  cat: '#f6a9c9', // pink
+  bee: '#ffd23f', // golden yellow
+  ladybug: '#e23b34', // red
+};
+
 /* ---------------- ambient decorations (stars / hearts / sparkles) ---------- */
 
 function AmbientDecor() {
@@ -577,7 +585,7 @@ export const MainScreen = ({
                       letterSpacing: '-0.3px',
                     }}
                   >
-                    Hi, I&apos;m <span style={{ color: 'var(--accent-primary)' }}>Sage</span>!
+                    Hi, I&apos;m <span style={{ color: AVATAR_HEADING_COLORS[avatar] }}>Sage</span>!
                   </h1>
                   <p
                     style={{
