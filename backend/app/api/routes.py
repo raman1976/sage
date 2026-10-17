@@ -52,6 +52,7 @@ async def chat(request: ChatRequest):
             mode=request.mode,
             message=request.message,
             history=request.history,
+            personality=request.personality,
         )
         return ChatResponse(reply=reply)
     except ValueError as e:

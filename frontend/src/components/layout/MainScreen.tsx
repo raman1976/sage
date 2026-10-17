@@ -14,6 +14,7 @@ import { useVoice } from '../../hooks/useVoice';
 import { useSageChat } from '../../hooks/useSageChat';
 import { useModeSuggestion, matchConfirmation, parseExplicitModeSwitch, type PendingSuggestion } from '../../hooks/useModeSuggestion';
 import { useState, useCallback, useRef, useEffect } from 'react';
+import { personalityForAvatar, setSagePersonality } from '../../services/personality';
 import backgroundImage from '../../assets/background.png';
 
 interface MainScreenProps {
@@ -114,6 +115,12 @@ export const MainScreen = ({
   const handleConsumeEntryContext = useCallback(() => {
     setModeEntryContext(null);
   }, []);
+
+  // Keep Sage's active personality in sync with the selected character so
+  // every Nemotron request (home chat, voice, and all modes) carries it.
+  useEffect(() => {
+    setSagePersonality(personalityForAvatar(avatar));
+  }, [avatar]);
 
   const voiceUiState: VoiceUiState = voice.listening
     ? 'listening'

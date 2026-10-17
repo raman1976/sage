@@ -24,6 +24,7 @@ class ChatRequest(BaseModel):
     mode: str
     message: str
     history: Optional[List[dict]] = None
+    personality: Optional[str] = None
 
 
 class ChatResponse(BaseModel):

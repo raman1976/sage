@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { api, type ChatMessage } from '../services/api';
+import { getSagePersonality, type SagePersonality } from '../services/personality';
 
 export interface SageChatMessage extends ChatMessage {
   id: string;
@@ -51,9 +52,32 @@ function loadHistory(): SageChatMessage[] {
   }
 }
 
+/** Signals that the model narrated its own reasoning/rules instead of replying. */
+const META_REASONING_PHRASES = [
+  'conversation history',
+  'system prompt',
+  'these instructions',
+  'my instructions',
+  'following the rules',
+  'follow the rules',
+  'the rules say',
+  'the rules state',
+  'conversation rules',
+  'one short friendly line',
+  'casual follow-up question',
+  'let me keep it brief',
+  'let me think this through',
+  'let me figure out',
+  'i should respond',
+  'i need to respond',
+  'introduce myself again',
+];
+
 /** Frontend safety net: never display anything resembling a reasoning trace. */
 function looksLikeReasoning(text: string): boolean {
-  const head = text.slice(0, 220).toLowerCase();
+  const t = text.trim();
+  const low = t.toLowerCase();
+  const head = low.slice(0, 240);
   if (
     head.includes('thinking process') ||
     head.includes('chain of thought') ||
@@ -61,29 +85,52 @@ function looksLikeReasoning(text: string): boolean {
     head.includes('analyze user input') ||
     head.includes('draft response') ||
     head.includes('(internal)') ||
-    head.startsWith('reasoning:')
+    head.startsWith('reasoning:') ||
+    META_REASONING_PHRASES.some((p) => low.includes(p)) ||
+    /^(okay,?\s+|hmm,?\s+|so,?\s+|alright,?\s+|well,?\s+|wait,?\s+)?(the user\b|the person\b|let me\b|i need to\b|i should\b|i'll\b|i will\b|first,\s*i\b|they said\b|looking back\b|re-?reading\b|this (is|seems)\b)/i.test(low)
   ) {
     return true;
   }
   // Numbered analysis outline ("1. **Analyze ...", "2. **Strategy ...").
-  return /^\s*\d+\.\s*\*\*(analyze|analysis|persona|strategy|draft|reasoning|thought|input)/i.test(text);
+  if (/^\s*\d+\.\s*\*\*(analyze|analysis|persona|strategy|draft|reasoning|thought|input)/i.test(t)) {
+    return true;
+  }
+  // Several meta phrases co-occurring — legit 1-2 sentence replies never do.
+  const hits = [
+    'the user', 'the conversation', 'the rules', 'the history',
+    'i should', 'i need to', 'let me', 'respond', 'reply',
+    'greeting', 'earlier', 'greeted',
+  ].filter((p) => low.includes(p)).length;
+  return hits >= 4;
 }
+
+/** Personality-flavoured, 1-2 sentence fallback for when Nemotron is offline. */
+const OFFLINE_OPENER: Record<SagePersonality, string> = {
+  bee: 'We got this though — ',
+  cat: 'Lowkey though — ',
+  bunny: "Hey, you're good — ",
+  ladybug: 'Real talk — ',
+};
 
 function offlineReply(message: string): string {
   const m = message.toLowerCase();
-  if (/(overwhelm|so much|where.*start|stressed|anxious)/.test(m)) {
-    return "Okay, your brain has like 37 tabs open right now. Let's pick just one — what's the single most urgent thing?";
+  if (/(anxious|stressed|overwhelm|so much|where.*start|panick)/.test(m)) {
+    return "You're fine. We don't gotta figure everything out right now — what's bugging you most?";
+  }
+  if (/(finish|finished|done|completed|did it|passed)/.test(m)) {
+    return 'AYOOO big W!! Look at you being productive and stuff.';
+  }
+  if (/(don'?t wanna|can'?t focus|procrastinat|distract|lazy)/.test(m)) {
+    return 'Valid, but future you is gonna be so mad at us 💀. Five minutes, deal?';
   }
   if (/(bored)/.test(m)) {
-    return 'Valid. Are we feeling productive bored or chaotic bored?';
+    return 'Valid. Are we productive bored or chaotic bored?';
   }
-  if (/(focus|concentrate|distract)/.test(m)) {
-    return "We got this. Pick one tiny task — like, embarrassingly tiny — and give it ten minutes. What's it gonna be?";
+  if (/(plan|organize|todo|task|study|work)/.test(m)) {
+    return "Say less. Let's pick the easiest win and build from there.";
   }
-  if (/(plan|organize|todo|task)/.test(m)) {
-    return "That's actually a solid idea to plan it out. Tell me the big scary thing and I'll break it into small steps.";
-  }
-  return "I'm offline right now, so I'm running on local vibes only — but I'm still here. Want to focus, plan, calm down, or just talk it out?";
+  const opener = OFFLINE_OPENER[getSagePersonality()];
+  return `${opener}I'm running on local vibes right now, but I'm still here. What's on your mind?`;
 }
 
 /**
