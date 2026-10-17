@@ -4,8 +4,8 @@ import type { SageMode, SageExpression } from '../../types';
 
 export type SageAvatar = 'lavender' | 'cat' | 'bee' | 'ladybug';
 
-/** Cycle order for the ✨ button: Lavender → Cat → Bee → Ladybug → Lavender. */
-export const AVATAR_ORDER: SageAvatar[] = ['lavender', 'cat', 'bee', 'ladybug'];
+/** Cycle order for the ✨ button: Bee → Cat → Lavender → Ladybug → Bee. */
+export const AVATAR_ORDER: SageAvatar[] = ['bee', 'cat', 'lavender', 'ladybug'];
 
 export const nextAvatar = (current: SageAvatar): SageAvatar =>
   AVATAR_ORDER[(AVATAR_ORDER.indexOf(current) + 1) % AVATAR_ORDER.length];
@@ -128,7 +128,7 @@ const EYE_TOP = 40;
 const EYE_LEFT_L = 27;
 const EYE_LEFT_R = 103;
 
-export const Character = ({ mode, expression, className = '', size = 1, avatar = 'lavender' }: CharacterProps) => {
+export const Character = ({ mode, expression, className = '', size = 1, avatar = 'bee' }: CharacterProps) => {
   const resolved: SageExpression = expression ?? expressionForMode(mode);
   const palette = AVATAR_PALETTES[avatar];
 

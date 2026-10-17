@@ -99,7 +99,7 @@ export const MainScreen = ({
   const [focusExpression, setFocusExpression] = useState<SageExpression | null>(null);
   const [focusTask, setFocusTask] = useState<string | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [avatar, setAvatar] = useState<SageAvatar>('lavender');
+  const [avatar, setAvatar] = useState<SageAvatar>('bee');
   const [voiceExpression, setVoiceExpression] = useState<SageExpression | null>(null);
   const overrideTimerRef = useRef<number | null>(null);
   // Latest home submitter for the continuous voice loop (outlives closures).
