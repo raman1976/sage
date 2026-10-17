@@ -166,6 +166,8 @@ export const Character = ({ mode, expression, className = '', size = 1, avatar =
   const eyeHeightMV = useMotionValue(EYE_H * expressionConfig.eyeScaleY);
   const eyeTopMV = useMotionValue(EYE_TOP + expressionConfig.eyeOffsetY);
   const eyeXMV = useMotionValue(0);
+  const gazeXMV = useMotionValue(0);
+  const gazeYMV = useMotionValue(0);
   const highlightOpacityMV = useMotionValue(expressionConfig.highlight !== 'none' ? 1 : 0);
   const browRotateMV = useMotionValue(expressionConfig.browRot);
   const browYMV = useMotionValue(expressionConfig.browLift);
@@ -201,6 +203,74 @@ export const Character = ({ mode, expression, className = '', size = 1, avatar =
     typeof window !== 'undefined' &&
     window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
+  /* ---- interactive eye tracking (pupils + highlights follow the cursor) ---- */
+  const rootRef = useRef<HTMLDivElement>(null);
+  const gazeTargetRef = useRef({ x: 0, y: 0 });
+  const gazeRef = useRef({ x: 0, y: 0 });
+
+  useEffect(() => {
+    if (reducedMotion) return;
+    const el = rootRef.current;
+    if (!el) return;
+
+    const coarse =
+      typeof window !== 'undefined' &&
+      window.matchMedia('(hover: none), (pointer: coarse)').matches;
+
+    const MAX = 6; // px — keeps pupils comfortably inside the eyes
+
+    // Touch devices: no cursor, so Sage glances around on its own.
+    if (coarse) {
+      let settle = 0;
+      const glance = () => {
+        const angle = Math.random() * Math.PI * 2;
+        const radius = 2 + Math.random() * 4;
+        gazeTargetRef.current = {
+          x: Math.cos(angle) * radius,
+          y: Math.sin(angle) * radius * 0.7,
+        };
+        if (settle) window.clearTimeout(settle);
+        settle = window.setTimeout(() => {
+          gazeTargetRef.current = { x: 0, y: 0 };
+        }, 700 + Math.random() * 900);
+      };
+      glance();
+      const interval = window.setInterval(glance, 2400 + Math.random() * 1600);
+      return () => {
+        window.clearInterval(interval);
+        if (settle) window.clearTimeout(settle);
+      };
+    }
+
+    const onPointerMove = (event: PointerEvent) => {
+      if (event.pointerType === 'touch') return;
+      const rect = el.getBoundingClientRect();
+      if (!rect.width) return;
+      const cx = rect.left + rect.width / 2;
+      const cy = rect.top + rect.height * 0.42;
+      const dx = event.clientX - cx;
+      const dy = event.clientY - cy;
+      const dist = Math.hypot(dx, dy) || 1;
+      const strength = Math.min(1, dist / 240);
+      gazeTargetRef.current = {
+        x: (dx / dist) * MAX * strength,
+        y: (dy / dist) * MAX * 0.8 * strength,
+      };
+    };
+    const reset = () => {
+      gazeTargetRef.current = { x: 0, y: 0 };
+    };
+
+    window.addEventListener('pointermove', onPointerMove, { passive: true });
+    window.addEventListener('pointerleave', reset);
+    window.addEventListener('blur', reset);
+    return () => {
+      window.removeEventListener('pointermove', onPointerMove);
+      window.removeEventListener('pointerleave', reset);
+      window.removeEventListener('blur', reset);
+    };
+  }, [reducedMotion]);
+
   useEffect(() => {
     if (reducedMotion) {
       const c = exprRef.current;
@@ -213,6 +283,8 @@ export const Character = ({ mode, expression, className = '', size = 1, avatar =
       headTiltMV.set(c.tilt);
       highlightOpacityMV.set(c.highlight !== 'none' ? 1 : 0);
       glowMV.set(MODE_GLOW[modeRef.current] ?? 0.7);
+      gazeXMV.set(0);
+      gazeYMV.set(0);
       return;
     }
 
@@ -264,6 +336,14 @@ export const Character = ({ mode, expression, className = '', size = 1, avatar =
       eyeWidthMV.set(EYE_W * (0.9 + 0.1 * blinkFactor));
       eyeTopMV.set(EYE_TOP + (1 - blinkFactor) * 10 + s.eyeOffsetY);
       eyeXMV.set(s.tilt * 0.25);
+
+      // Smoothly ease the pupils + highlights toward the gaze target.
+      const gz = gazeRef.current;
+      gz.x += (gazeTargetRef.current.x - gz.x) * 0.08;
+      gz.y += (gazeTargetRef.current.y - gz.y) * 0.08;
+      gazeXMV.set(gz.x);
+      gazeYMV.set(gz.y);
+
       highlightOpacityMV.set(s.highlightOn * blinkFactor);
       browRotateMV.set(s.browRot);
       browYMV.set(s.browY);
@@ -293,6 +373,7 @@ export const Character = ({ mode, expression, className = '', size = 1, avatar =
 
   return (
     <div
+      ref={rootRef}
       className={`sage-character ${className}`}
       style={{
         position: 'relative',
@@ -357,6 +438,8 @@ export const Character = ({ mode, expression, className = '', size = 1, avatar =
               eyeWidthMV={eyeWidthMV}
               eyeHeightMV={eyeHeightMV}
               eyeXMV={eyeXMV}
+              gazeXMV={gazeXMV}
+              gazeYMV={gazeYMV}
               highlightOpacityMV={highlightOpacityMV}
               browRotateMV={browRotateMV}
               browYMV={browYMV}
@@ -655,6 +738,8 @@ interface FaceProps {
   eyeWidthMV: MotionValue<number>;
   eyeHeightMV: MotionValue<number>;
   eyeXMV: MotionValue<number>;
+  gazeXMV: MotionValue<number>;
+  gazeYMV: MotionValue<number>;
   highlightOpacityMV: MotionValue<number>;
   browRotateMV: MotionValue<number>;
   browYMV: MotionValue<number>;
@@ -671,6 +756,8 @@ const Face = ({
   eyeWidthMV,
   eyeHeightMV,
   eyeXMV,
+  gazeXMV,
+  gazeYMV,
   highlightOpacityMV,
   browRotateMV,
   browYMV,
@@ -698,6 +785,8 @@ const Face = ({
       widthMV={eyeWidthMV}
       heightMV={eyeHeightMV}
       xMV={eyeXMV}
+      gazeXMV={gazeXMV}
+      gazeYMV={gazeYMV}
       eyeOpenMV={eyeOpenMV}
       highlight={highlight}
       highlightOpacityMV={highlightOpacityMV}
@@ -711,6 +800,8 @@ const Face = ({
       widthMV={eyeWidthMV}
       heightMV={eyeHeightMV}
       xMV={eyeXMV}
+      gazeXMV={gazeXMV}
+      gazeYMV={gazeYMV}
       eyeOpenMV={eyeOpenMV}
       highlight={highlight}
       highlightOpacityMV={highlightOpacityMV}
@@ -730,6 +821,8 @@ interface EyeProps {
   widthMV: MotionValue<number>;
   heightMV: MotionValue<number>;
   xMV: MotionValue<number>;
+  gazeXMV: MotionValue<number>;
+  gazeYMV: MotionValue<number>;
   eyeOpenMV: MotionValue<number>;
   highlight: ExpressionConfig['highlight'];
   highlightOpacityMV: MotionValue<number>;
@@ -744,6 +837,8 @@ const Eye = ({
   widthMV,
   heightMV,
   xMV,
+  gazeXMV,
+  gazeYMV,
   eyeOpenMV,
   highlight,
   highlightOpacityMV,
@@ -773,9 +868,35 @@ const Eye = ({
           borderRadius: '50%',
           boxShadow:
             'inset 0 -4px 8px rgba(0,0,0,0.25), 0 2px 4px rgba(0,0,0,0.10)',
+          overflow: 'hidden',
           zIndex: 5,
         }}
       >
+        {/* pupil — eases with the gaze; the eyeball itself stays in place */}
+        <motion.div
+          style={{
+            position: 'absolute',
+            top: EYE_H * 0.21,
+            left: EYE_W * 0.23,
+            width: EYE_W * 0.54,
+            height: EYE_H * 0.64,
+            x: gazeXMV,
+            y: gazeYMV,
+            background:
+              'radial-gradient(circle at 40% 32%, var(--sage-eye) 0%, var(--sage-eye-deep) 60%, #0f0a06 100%)',
+            borderRadius: '50%',
+          }}
+        />
+
+        {/* highlights drift with the pupil for a lifelike effect */}
+        <motion.div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            x: gazeXMV,
+            y: gazeYMV,
+          }}
+        >
         {highlight === 'star' ? (
           <>
             <motion.div
@@ -834,6 +955,7 @@ const Eye = ({
             />
           </>
         )}
+        </motion.div>
       </motion.div>
 
       {/* Closed eye (∩ arc), fades in as the open eye fades out */}
