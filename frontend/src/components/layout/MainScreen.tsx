@@ -14,6 +14,7 @@ import { useVoice } from '../../hooks/useVoice';
 import { useSageChat } from '../../hooks/useSageChat';
 import { useModeSuggestion, matchConfirmation, parseExplicitModeSwitch, type PendingSuggestion } from '../../hooks/useModeSuggestion';
 import { useState, useCallback, useRef, useEffect } from 'react';
+import backgroundImage from '../../assets/background.png';
 
 interface MainScreenProps {
   currentMode: SageMode;
@@ -384,7 +385,11 @@ export const MainScreen = ({
         height: '100dvh',
         maxWidth: '100dvw',
         overflow: 'hidden',
-        background: 'var(--bg-main)',
+        backgroundColor: 'var(--bg-main)',
+        backgroundImage: `linear-gradient(180deg, rgba(8,6,16,0.42) 0%, rgba(8,6,16,0.28) 45%, rgba(8,6,16,0.58) 100%), url(${backgroundImage})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat',
         fontFamily: 'var(--font-body)',
       }}
       initial={{ opacity: 0 }}
@@ -419,7 +424,7 @@ export const MainScreen = ({
           left: 0,
           right: 0,
           height: 'clamp(60px, 18vh, 100px)',
-          background: 'linear-gradient(180deg, transparent 0%, var(--bg-secondary) 40%, var(--bg-main) 100%)',
+          background: 'linear-gradient(180deg, transparent 0%, rgba(8,6,16,0.28) 55%, rgba(8,6,16,0.55) 100%)',
           pointerEvents: 'none',
           zIndex: 0,
         }}
