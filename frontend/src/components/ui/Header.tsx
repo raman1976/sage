@@ -54,9 +54,11 @@ interface HeaderProps {
   onSettingsClick: () => void;
   onCustomizeClick: () => void;
   onLogoClick?: () => void;
+  /** Color for the "Sage" wordmark, matched to the selected avatar. */
+  logoColor?: string;
 }
 
-export const Header = ({ onSettingsClick, onCustomizeClick, onLogoClick }: HeaderProps) => (
+export const Header = ({ onSettingsClick, onCustomizeClick, onLogoClick, logoColor }: HeaderProps) => (
   <header
     style={{
       position: 'absolute',
@@ -103,7 +105,7 @@ export const Header = ({ onSettingsClick, onCustomizeClick, onLogoClick }: Heade
           fontSize: 'clamp(18px, 4vw, 26px)',
           fontWeight: 700,
           fontFamily: 'var(--font-display)',
-          color: 'var(--text-primary)',
+          color: logoColor ?? 'var(--text-primary)',
           letterSpacing: '-0.3px',
           textShadow: '0 2px 8px rgba(0,0,0,0.3)',
         }}

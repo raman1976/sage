@@ -442,6 +442,7 @@ export const MainScreen = ({
         onSettingsClick={() => setSettingsOpen(true)}
         onCustomizeClick={() => setAvatar((a) => nextAvatar(a))}
         onLogoClick={handleBackToHome}
+        logoColor={AVATAR_HEADING_COLORS[avatar]}
       />
       <VoiceSettings open={settingsOpen} onClose={() => setSettingsOpen(false)} voice={voice} />
 
