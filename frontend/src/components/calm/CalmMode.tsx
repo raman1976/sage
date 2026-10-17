@@ -522,12 +522,15 @@ function TalkView({
   );
 
   const toggleMic = useCallback(() => {
-    if (voice.listening) {
-      voice.stopListening();
+    if (voice.continuous || voice.listening) {
+      voice.stopSpeaking();
+      voice.stopContinuous();
       onExpressionChange('calm');
+    } else if (voice.speaking) {
+      voice.stopSpeaking();
     } else {
       onExpressionChange('curious');
-      voice.startListening((text) => {
+      voice.startContinuous((text) => {
         setDraft(text);
       });
     }

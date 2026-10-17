@@ -443,12 +443,15 @@ function DuckView({
   );
 
   const toggleMic = useCallback(() => {
-    if (voice.listening) {
-      voice.stopListening();
+    if (voice.continuous || voice.listening) {
+      voice.stopSpeaking();
+      voice.stopContinuous();
       onExpressionChange('happy');
+    } else if (voice.speaking) {
+      voice.stopSpeaking();
     } else {
       onExpressionChange('curious');
-      voice.startListening((text) => setDraft(text));
+      voice.startContinuous((text) => setDraft(text));
     }
   }, [voice, onExpressionChange]);
 
@@ -529,12 +532,15 @@ function DumpView({
   useEffect(() => voice.stopSpeaking, [voice.stopSpeaking]);
 
   const toggleMic = useCallback(() => {
-    if (voice.listening) {
-      voice.stopListening();
+    if (voice.continuous || voice.listening) {
+      voice.stopSpeaking();
+      voice.stopContinuous();
       onExpressionChange('happy');
+    } else if (voice.speaking) {
+      voice.stopSpeaking();
     } else {
       onExpressionChange('curious');
-      voice.startListening((text) => setDraft((d) => (d ? `${d} ${text}` : text)));
+      voice.startContinuous((text) => setDraft((d) => (d ? `${d} ${text}` : text)));
     }
   }, [voice, onExpressionChange]);
 
@@ -1010,12 +1016,15 @@ function RoleplayView({
   }, [messages, onExpressionChange, speakIfOn, who, about]);
 
   const toggleMic = useCallback(() => {
-    if (voice.listening) {
-      voice.stopListening();
+    if (voice.continuous || voice.listening) {
+      voice.stopSpeaking();
+      voice.stopContinuous();
       onExpressionChange('happy');
+    } else if (voice.speaking) {
+      voice.stopSpeaking();
     } else {
       onExpressionChange('curious');
-      voice.startListening((text) => setDraft(text));
+      voice.startContinuous((text) => setDraft(text));
     }
   }, [voice, onExpressionChange]);
 

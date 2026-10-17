@@ -92,6 +92,8 @@ export const MainScreen = ({
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [voiceExpression, setVoiceExpression] = useState<SageExpression | null>(null);
   const overrideTimerRef = useRef<number | null>(null);
+  // Latest home submitter for the continuous voice loop (outlives closures).
+  const homeSubmitRef = useRef<(value: string) => Promise<void>>(async () => {});
 
   const music = useMusicPlayer(currentMode);
   const voice = useVoice();
@@ -184,6 +186,7 @@ export const MainScreen = ({
   const isHome = !isCalm && !isCompanion && !isPlan && !isFocus;
 
   const handleBackToHome = useCallback(() => {
+    voice.stopContinuous();
     setCalmExpression(null);
     setCompanionExpression(null);
     setPlanExpression(null);
@@ -239,18 +242,13 @@ export const MainScreen = ({
       return;
     }
 
-    // 2. A pending suggestion gets next dibs — "yes"/"no" answers it (text or voice).
+    // 2. A pending suggestion gets next dibs — "yes"/"no" only dismiss
+    // the card and continue chatting. Suggestions NEVER navigate, not even
+    // on "yes": only an explicit switch command (step 1) or a mode card
+    // click may change modes.
     if (suggest.suggestion) {
       const verdict = matchConfirmation(text);
-      if (verdict === 'yes') {
-        const taken = suggest.takeSuggestion();
-        onSendMessage(text);
-        setInputValue('');
-        setShowWelcome(false);
-        if (taken) confirmSuggestion(taken);
-        return;
-      }
-      if (verdict === 'no') {
+      if (verdict === 'yes' || verdict === 'no') {
         suggest.declineSuggestion();
         // fall through: keep chatting normally
       }
@@ -279,12 +277,20 @@ export const MainScreen = ({
       setVoiceExpression('calm');
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [onSendMessage, chat.send, chat.messages, voice.voiceOn, voice.autoSpeak, voice.ttsSupported, voice.speak, suggest.suggestion, suggest.takeSuggestion, suggest.declineSuggestion, suggest.noteUserMessage, suggest.maybeSuggest]);
+  }, [onSendMessage, chat.send, chat.messages, voice.voiceOn, voice.autoSpeak, voice.ttsSupported, voice.speak, suggest.suggestion, suggest.declineSuggestion, suggest.noteUserMessage, suggest.maybeSuggest]);
 
-  /** Navigate to a confirmed suggestion, carrying conversation context along. */
+  homeSubmitRef.current = handleHomeSubmit;
+
+  // Each resumed continuous turn shows the listening face again.
+  useEffect(() => {
+    if (voice.continuous && voice.listening) setVoiceExpression('curious');
+  }, [voice.continuous, voice.listening]);
+
+  /** Navigate on explicit switch commands, carrying conversation context along. */
   const confirmSuggestion = useCallback((taken: PendingSuggestion) => {
     voice.stopSpeaking();
     voice.stopListening();
+    voice.stopContinuous();
     setVoiceExpression(null);
     if (taken.mode === 'focus') {
       handleStartFocus(taken.context);
@@ -297,30 +303,32 @@ export const MainScreen = ({
     setFocusExpression(null);
     onModeChange(taken.mode);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [onModeChange, voice.stopSpeaking, voice.stopListening]);
+  }, [onModeChange, voice.stopSpeaking, voice.stopListening, voice.stopContinuous]);
 
-  /** Mic toggle: stop speech / stop listening / start listening. Never double-starts. */
+  /** Mic toggle: enter/exit continuous hands-free mode. Stops speech first. */
   const handleMicToggle = useCallback(() => {
     scheduleInactivityReset();
+    if (voice.continuous || voice.listening) {
+      voice.stopSpeaking();
+      voice.stopContinuous();
+      return;
+    }
     if (voice.speaking) {
       voice.stopSpeaking();
       return;
     }
-    if (voice.listening) {
-      voice.stopListening();
-      return;
-    }
     if (chat.status === 'thinking') return; // one AI request at a time
-    voice.stopSpeaking(); // avoid mic catching Sage's own voice
     setVoiceExpression('curious');
-    voice.startListening((spoken: string) => {
-      handleHomeSubmit(spoken);
+    voice.startContinuous((spoken: string) => {
+      // Latest submitter via ref (continuous loop outlives render closures).
+      homeSubmitRef.current(spoken);
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [voice.speaking, voice.listening, chat.status, voice.stopSpeaking, voice.stopListening, voice.startListening, handleHomeSubmit]);
+  }, [voice.continuous, voice.listening, voice.speaking, chat.status, voice.stopSpeaking, voice.stopContinuous, voice.startContinuous]);
 
   const handleModeClick = useCallback((mode: SageMode) => {
     if (mode !== currentMode) {
+      voice.stopContinuous();
       setCalmExpression(null);
       setCompanionExpression(null);
       setPlanExpression(null);
@@ -353,10 +361,12 @@ export const MainScreen = ({
   }, [onModeChange]);
 
   const handleStartFocus = useCallback((task: string) => {
+    voice.stopContinuous();
     setPlanExpression(null);
     setFocusExpression(null);
     setFocusTask(task);
     onModeChange('focus');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [onModeChange]);
 
   const handleConsumeFocusTask = useCallback(() => {
@@ -591,10 +601,6 @@ export const MainScreen = ({
                   modeLabel: suggest.modeLabel(suggest.suggestion.mode),
                   askLine: suggest.suggestion.askLine,
                 } : null}
-                onConfirmSuggestion={() => {
-                  const taken = suggest.takeSuggestion();
-                  if (taken) confirmSuggestion(taken);
-                }}
                 onDeclineSuggestion={() => {
                   suggest.declineSuggestion();
                   scheduleInactivityReset();

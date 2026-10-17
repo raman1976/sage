@@ -448,12 +448,15 @@ export const PlanMode = ({ onExit, onExpressionChange, onStartFocus, entryContex
   /* ---------------------------------- voice ---------------------------------- */
 
   const toggleMicTask = useCallback(() => {
-    if (voice.listening) {
-      voice.stopListening();
+    if (voice.continuous || voice.listening) {
+      voice.stopSpeaking();
+      voice.stopContinuous();
       onExpressionChange('happy');
+    } else if (voice.speaking) {
+      voice.stopSpeaking();
     } else {
       onExpressionChange('curious');
-      voice.startListening((text) => setTaskDraft((d) => (d ? `${d} ${text}` : text)));
+      voice.startContinuous((text) => setTaskDraft((d) => (d ? `${d} ${text}` : text)));
     }
   }, [voice, onExpressionChange]);
 

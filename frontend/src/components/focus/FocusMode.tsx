@@ -278,10 +278,13 @@ export const FocusMode = ({ onExit, onExpressionChange, initialTask, onConsumeIn
   }, [resolveSeconds, onExpressionChange]);
 
   const toggleMicPark = useCallback(() => {
-    if (voice.listening) {
-      voice.stopListening();
+    if (voice.continuous || voice.listening) {
+      voice.stopSpeaking();
+      voice.stopContinuous();
+    } else if (voice.speaking) {
+      voice.stopSpeaking();
     } else {
-      voice.startListening((text) => setParkDraft((d) => (d ? `${d} ${text}` : text)));
+      voice.startContinuous((text) => setParkDraft((d) => (d ? `${d} ${text}` : text)));
     }
   }, [voice]);
 

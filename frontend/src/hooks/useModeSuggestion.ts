@@ -141,14 +141,6 @@ export function useModeSuggestion() {
     [suggestion],
   );
 
-  /** Confirm and take the suggestion (caller navigates). */
-  const takeSuggestion = useCallback((): PendingSuggestion | null => {
-    if (!suggestion) return null;
-    const taken = suggestion;
-    setSuggestion(null);
-    return taken;
-  }, [suggestion]);
-
   /** Decline: dismiss + start cooldown so we don't nag about this mode. */
   const declineSuggestion = useCallback(() => {
     setSuggestion((prev) => {
@@ -164,7 +156,6 @@ export function useModeSuggestion() {
   return {
     suggestion,
     maybeSuggest,
-    takeSuggestion,
     declineSuggestion,
     clearSuggestion,
     noteUserMessage,

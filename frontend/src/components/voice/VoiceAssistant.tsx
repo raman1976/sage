@@ -22,7 +22,6 @@ interface VoiceAssistantProps {
   messages: SageChatMessage[];
   animateDelay: boolean;
   suggestion?: SuggestionCard | null;
-  onConfirmSuggestion?: () => void;
   onDeclineSuggestion?: () => void;
   transcriptLimit?: number;
 }
@@ -73,7 +72,6 @@ export const VoiceAssistant = ({
   messages,
   animateDelay,
   suggestion = null,
-  onConfirmSuggestion,
   onDeclineSuggestion,
   transcriptLimit = 8,
 }: VoiceAssistantProps) => {
@@ -240,7 +238,8 @@ export const VoiceAssistant = ({
         </div>
       )}
 
-      {/* mode suggestion — always asks first, never auto-navigates */}
+      {/* mode recommendation — never navigates on its own.
+          Switch only via an explicit "switch to X mode" or a mode card. */}
       {suggestion && (
         <motion.div
           initial={{ opacity: 0, y: 8 }}
@@ -269,25 +268,18 @@ export const VoiceAssistant = ({
           >
             {suggestion.askLine}
           </p>
+          <p
+            style={{
+              margin: '2px 0 0',
+              fontSize: 'clamp(10px, 2.3vw, 12px)',
+              lineHeight: 1.4,
+              color: 'var(--text-secondary)',
+              fontFamily: 'var(--font-body)',
+            }}
+          >
+            Say &ldquo;switch to {suggestion.modeLabel} mode&rdquo; or tap a card below 👇
+          </p>
           <div style={{ display: 'flex', gap: 6, marginTop: 6, flexWrap: 'wrap' }}>
-            <button
-              type="button"
-              onClick={onConfirmSuggestion}
-              style={{
-                border: '1px solid var(--accent-primary)',
-                borderRadius: 9999,
-                background: 'linear-gradient(135deg, var(--accent-primary), #9d85c7)',
-                color: '#17171D',
-                fontSize: 'clamp(11px, 2.4vw, 12px)',
-                fontWeight: 700,
-                padding: '5px 12px',
-                cursor: 'pointer',
-                fontFamily: 'var(--font-body)',
-                WebkitTapHighlightColor: 'transparent',
-              }}
-            >
-              Yes, let&apos;s go
-            </button>
             <button
               type="button"
               onClick={onDeclineSuggestion}
