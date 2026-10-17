@@ -6,7 +6,7 @@ import { CalmMode } from '../calm';
 import { CompanionMode } from '../companion';
 import { FocusMode } from '../focus';
 import { PlanMode } from '../plan';
-import { Header, ModeButton } from '../ui';
+import { Header, ModeButton, FireflyCursor } from '../ui';
 import { VoiceAssistant, VoiceSettings, type VoiceUiState } from '../voice';
 import { MusicPlayer } from '../music';
 import { useMusicPlayer } from '../../hooks/useMusicPlayer';
@@ -683,6 +683,9 @@ export const MainScreen = ({
         }}
         transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
       />
+
+      {/* magical firefly cursor (desktop only) */}
+      <FireflyCursor color={AVATAR_HEADING_COLORS[avatar]} />
     </motion.div>
   );
 };

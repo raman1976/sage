@@ -1,0 +1,187 @@
+/* ---- magical firefly cursor (desktop only) ---- */
+
+/* Hide the native cursor while the firefly is active, but keep it for typing. */
+html.sage-firefly-active,
+html.sage-firefly-active body,
+html.sage-firefly-active * {
+  cursor: none !important;
+}
+
+html.sage-firefly-active input,
+html.sage-firefly-active textarea,
+html.sage-firefly-active [contenteditable='true'] {
+  cursor: text !important;
+}
+
+.ff-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483000;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.ff-pos {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 30px;
+  height: 30px;
+  will-change: transform;
+  opacity: 1;
+  transition: opacity 0.16s ease;
+}
+
+.ff-pos.is-hidden {
+  opacity: 0;
+}
+
+.ff-hover {
+  width: 100%;
+  height: 100%;
+  transform: scale(1);
+  transform-origin: center;
+  transition: transform 0.18s ease;
+}
+
+.ff-hover.is-hover {
+  transform: scale(1.24);
+}
+
+.ff-idle {
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+
+.ff-idle.is-idle {
+  animation: ff-float 2.6s ease-in-out infinite;
+}
+
+.ff-glow {
+  position: absolute;
+  left: 50%;
+  top: 56%;
+  width: 46px;
+  height: 46px;
+  margin: -23px 0 0 -23px;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--ff-color) 0%, transparent 68%);
+  opacity: 0.5;
+  filter: blur(5px);
+  transition: opacity 0.2s ease;
+}
+
+.ff-hover.is-hover .ff-glow {
+  opacity: 0.95;
+}
+
+.ff-svg {
+  position: relative;
+  display: block;
+  overflow: visible;
+  filter: drop-shadow(0 0 4px var(--ff-color));
+  transition: filter 0.2s ease;
+}
+
+.ff-hover.is-hover .ff-svg {
+  filter: drop-shadow(0 0 8px var(--ff-color)) drop-shadow(0 0 14px var(--ff-color));
+}
+
+/* wing flutter */
+.ff-wing-l {
+  transform-box: fill-box;
+  transform-origin: 100% 100%;
+  animation: ff-flap-l 0.32s ease-in-out infinite;
+}
+
+.ff-wing-r {
+  transform-box: fill-box;
+  transform-origin: 0% 100%;
+  animation: ff-flap-r 0.32s ease-in-out infinite;
+}
+
+@keyframes ff-flap-l {
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+  50% {
+    transform: rotate(-9deg);
+  }
+}
+
+@keyframes ff-flap-r {
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+  50% {
+    transform: rotate(9deg);
+  }
+}
+
+@keyframes ff-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-3px);
+  }
+}
+
+/* ---- sparkle trail ---- */
+.ff-spark {
+  position: absolute;
+  border-radius: 50%;
+  background: radial-gradient(circle, #ffffff 0%, var(--ff-color) 55%, transparent 75%);
+  box-shadow: 0 0 6px var(--ff-color);
+  opacity: 0.9;
+  pointer-events: none;
+  animation-name: ff-spark-out;
+  animation-timing-function: ease-out;
+  animation-fill-mode: forwards;
+}
+
+@keyframes ff-spark-out {
+  0% {
+    transform: scale(0.4) translateY(0);
+    opacity: 0.95;
+  }
+  100% {
+    transform: scale(0.1) translateY(-10px);
+    opacity: 0;
+  }
+}
+
+/* ---- click burst ---- */
+.ff-burst {
+  position: absolute;
+  border-radius: 50%;
+  background: radial-gradient(circle, #ffffff 0%, var(--ff-color) 60%, transparent 78%);
+  box-shadow: 0 0 8px var(--ff-color);
+  pointer-events: none;
+  animation-name: ff-burst-out;
+  animation-timing-function: cubic-bezier(0.15, 0.7, 0.3, 1);
+  animation-fill-mode: forwards;
+}
+
+@keyframes ff-burst-out {
+  0% {
+    transform: translate(0, 0) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(var(--dx), var(--dy)) scale(0.2);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ff-wing-l,
+  .ff-wing-r,
+  .ff-idle.is-idle {
+    animation: none !important;
+  }
+}
