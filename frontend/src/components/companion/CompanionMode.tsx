@@ -89,39 +89,11 @@ const inputStyle: React.CSSProperties = {
 let msgId = 1;
 const nextId = () => msgId++;
 
-/* ------------------------------ offline scripts ----------------------------- */
+/* ------------------------------ error notice ------------------------------- */
 
-function localDuckReply(turn: number): string {
-  if (turn <= 0) {
-    return 'Okay, I’m listening. Walk me through it — what’s the problem you’re chewing on?';
-  }
-  const questions = [
-    'What have you already tried, and what happened?',
-    'What would “done” look like here?',
-    'What’s the smallest piece of this you could untangle first?',
-    'What are you assuming that might not be true?',
-    'If a friend described this exact problem, what would you ask them?',
-    'What’s one thing you know for sure about this, and one thing you’re unsure of?',
-  ];
-  const openers = ['Mm, good detail.', 'Got it. Let me think with you for a second.', 'That helps. Okay…'];
-  return `${openers[(turn - 1) % openers.length]} ${questions[(turn - 1) % questions.length]}`;
-}
-
-function localRoleplayNudge(turn: number): string {
-  const nudges = [
-    'Good start. Say your opening line as you’d really say it — I’m listening.',
-    'Nice. Now try saying the hardest part out loud.',
-    'You’re doing well. What would you say if they push back on that?',
-    'Strong. Try wrapping up — how would you close this conversation?',
-  ];
-  return turn <= 0
-    ? 'Alright, I’m in role — well, almost. AI roleplay isn’t available right now, so let’s rehearse solo: say your opening line, and I’ll coach you through it.'
-    : nudges[(turn - 1) % nudges.length];
-}
-
-function localFeedback(): string {
-  return 'Here’s my honest take: your points come through clearly, and your tone stays respectful. One tip — pause after your main point instead of filling the silence. Want to run it once more?';
-}
+/** Shown when inference fails — never fabricate a reply. */
+const AI_UNAVAILABLE =
+  '⚠️ I couldn’t reach the AI just now. Try again in a moment.';
 
 /* ------------------------------ message list -------------------------------- */
 
@@ -431,11 +403,11 @@ function DuckView({
       }
 
       await new Promise((r) => window.setTimeout(r, 500));
-      const finalReply = reply ?? localDuckReply(turn);
+      const finalReply = reply ?? AI_UNAVAILABLE;
       setTurn((t) => t + 1);
-      setMessages((m) => [...m, { id: nextId(), role: 'sage', text: finalReply as string }]);
+      setMessages((m) => [...m, { id: nextId(), role: 'sage', text: finalReply }]);
       onExpressionChange('happy');
-      speakIfOn(finalReply as string);
+      if (reply) speakIfOn(finalReply);
       setBusy(false);
       busyRef.current = false;
     },
@@ -980,11 +952,11 @@ function RoleplayView({
       }
 
       await new Promise((r) => window.setTimeout(r, 500));
-      const finalReply = reply ?? localRoleplayNudge(turn);
+      const finalReply = reply ?? AI_UNAVAILABLE;
       setTurn((t) => t + 1);
-      setMessages((m) => [...m, { id: nextId(), role: 'sage', text: finalReply as string }]);
+      setMessages((m) => [...m, { id: nextId(), role: 'sage', text: finalReply }]);
       onExpressionChange('happy');
-      speakIfOn(finalReply as string);
+      if (reply) speakIfOn(finalReply);
       setBusy(false);
       busyRef.current = false;
     },
@@ -1009,10 +981,10 @@ function RoleplayView({
       setAiAvailable(false);
       fb = null;
     }
-    const finalFb = fb ?? localFeedback();
+    const finalFb = fb ?? AI_UNAVAILABLE;
     setFeedback(finalFb);
     onExpressionChange('happy');
-    speakIfOn(finalFb);
+    if (fb) speakIfOn(finalFb);
   }, [messages, onExpressionChange, speakIfOn, who, about]);
 
   const toggleMic = useCallback(() => {

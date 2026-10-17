@@ -7,6 +7,7 @@ from app.services.model_router import (
     fallback_decisions,
     select_model,
 )
+from app.services import usage_ledger
 from typing import List, Dict, Optional
 import logging
 import time
@@ -416,13 +417,31 @@ class NemotronService:
             reasoning_tokens = getattr(details, "reasoning_tokens", None)
 
         served_model = getattr(response, "model", decision.model) or decision.model
+        # Upstream request id (x-request-id) — lets Nebius support trace the
+        # billable event. Never contains the key.
+        request_id = getattr(response, "_request_id", None)
         logger.info(
             "Sage inference | provider=%s tier=%s model=%s mode=%s personality=%s "
             "latency=%.3fs prompt_tokens=%s completion_tokens=%s reasoning_tokens=%s "
-            "fallback=%s",
+            "request_id=%s fallback=%s",
             PROVIDER, decision.tier, served_model, mode, personality or "-",
-            latency, prompt_tokens, completion_tokens, reasoning_tokens, fallback_used,
+            latency, prompt_tokens, completion_tokens, reasoning_tokens, request_id, fallback_used,
         )
+
+        # Local, dashboard-independent usage record (see GET /api/usage).
+        usage_ledger.record({
+            "provider": PROVIDER,
+            "tier": decision.tier,
+            "model": served_model,
+            "mode": mode,
+            "personality": personality or "-",
+            "latency_ms": round(latency * 1000, 1),
+            "prompt_tokens": prompt_tokens,
+            "completion_tokens": completion_tokens,
+            "reasoning_tokens": reasoning_tokens,
+            "request_id": request_id,
+            "fallback": fallback_used,
+        })
 
         if not content.strip():
             return None

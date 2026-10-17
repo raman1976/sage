@@ -3,6 +3,7 @@ from fastapi.responses import JSONResponse
 from app.models.schemas import HealthResponse, AgentStateRequest, AgentStateResponse, ChatRequest, ChatResponse, ModeSuggestionRequest, ModeSuggestionResponse
 from app.services.agent import agent_service
 from app.services.nemotron import nemotron_service
+from app.services import usage_ledger
 
 router = APIRouter()
 
@@ -25,6 +26,12 @@ async def options_api_mode_suggestion():
 @router.get("/health", response_model=HealthResponse)
 async def health_check():
     return HealthResponse(status="ok", name="Sage")
+
+
+@router.get("/api/usage")
+async def get_usage(limit: int = 20):
+    """Local, dashboard-independent token usage for Sage's Nemotron calls."""
+    return JSONResponse(content=usage_ledger.summary(limit=limit))
 
 
 @router.get("/api/state", response_model=AgentStateResponse)

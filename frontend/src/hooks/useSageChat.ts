@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { api, type ChatMessage } from '../services/api';
-import { getSagePersonality, type SagePersonality } from '../services/personality';
 
 export interface SageChatMessage extends ChatMessage {
   id: string;
@@ -104,34 +103,9 @@ function looksLikeReasoning(text: string): boolean {
   return hits >= 4;
 }
 
-/** Personality-flavoured, 1-2 sentence fallback for when Nemotron is offline. */
-const OFFLINE_OPENER: Record<SagePersonality, string> = {
-  bee: 'We got this though — ',
-  cat: 'Lowkey though — ',
-  bunny: "Hey, you're good — ",
-  ladybug: 'Real talk — ',
-};
-
-function offlineReply(message: string): string {
-  const m = message.toLowerCase();
-  if (/(anxious|stressed|overwhelm|so much|where.*start|panick)/.test(m)) {
-    return "You're fine. We don't gotta figure everything out right now — what's bugging you most?";
-  }
-  if (/(finish|finished|done|completed|did it|passed)/.test(m)) {
-    return 'AYOOO big W!! Look at you being productive and stuff.';
-  }
-  if (/(don'?t wanna|can'?t focus|procrastinat|distract|lazy)/.test(m)) {
-    return 'Valid, but future you is gonna be so mad at us 💀. Five minutes, deal?';
-  }
-  if (/(bored)/.test(m)) {
-    return 'Valid. Are we productive bored or chaotic bored?';
-  }
-  if (/(plan|organize|todo|task|study|work)/.test(m)) {
-    return "Say less. Let's pick the easiest win and build from there.";
-  }
-  const opener = OFFLINE_OPENER[getSagePersonality()];
-  return `${opener}I'm running on local vibes right now, but I'm still here. What's on your mind?`;
-}
+/** Shown when inference fails — never fabricate a reply. */
+const AI_UNAVAILABLE =
+  '⚠️ I couldn’t reach the AI just now. Make sure the Sage backend is running, then try again.';
 
 /**
  * Home-assistant conversation: persisted history, Nemotron via POST /api/chat,
@@ -198,20 +172,19 @@ export function useSageChat() {
     try {
       const data = await api.chatWithSignal('idle', message, history, controller.signal);
       if (sessionIdRef.current !== sessionId) return null; // session reset mid-flight
-      let reply = (data.reply ?? '').trim();
-      if (!reply || looksLikeReasoning(reply)) {
-        reply = offlineReply(message);
-      }
+      const reply = (data.reply ?? '').trim();
+      // Empty / reasoning-leak output is a real failure — never a reply to show.
+      if (!reply || looksLikeReasoning(reply)) throw new Error('unusable reply');
       setMessages((prev) => [...prev.slice(-MAX_STORED + 1), { id: nid(), role: 'assistant', content: reply }]);
       setStatus('idle');
       return reply;
     } catch {
       if (sessionIdRef.current !== sessionId) return null; // session reset mid-flight
-      const reply = offlineReply(message);
-      setMessages((prev) => [...prev.slice(-MAX_STORED + 1), { id: nid(), role: 'assistant', content: reply }]);
-      setError('Sage is offline — local replies for now.');
+      // Inference failed (backend down / Nebius error): show the error, don't fake.
+      setMessages((prev) => [...prev.slice(-MAX_STORED + 1), { id: nid(), role: 'assistant', content: AI_UNAVAILABLE }]);
+      setError(AI_UNAVAILABLE);
       setStatus('error');
-      return reply;
+      return null;
     } finally {
       window.clearTimeout(timer);
       inFlightRef.current = false;

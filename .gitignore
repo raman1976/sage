@@ -20,6 +20,9 @@ Thumbs.db
 # Logs
 *.log
 
+# Local Nemotron usage ledger (runtime data, may contain usage metadata)
+usage_ledger.jsonl
+
 # Build / package files
 build/
 dist/

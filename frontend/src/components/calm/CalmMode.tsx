@@ -82,19 +82,9 @@ function useReducedMotion(): boolean {
 let msgId = 1;
 const nextId = () => msgId++;
 
-/** Short, scripted comfort replies. Clearly local — never presented as AI. */
-function localComfortReply(turn: number): string {
-  if (turn <= 0) {
-    return "Thank you for trusting me with that. That sounds really heavy. What's weighing on you the most right now?";
-  }
-  const followUps = [
-    "I'm still here with you. That makes complete sense. Would it help to say a little more about it?",
-    'Mm. It’s okay to feel this way. Take your time — I’m not going anywhere.',
-    "You're doing well by putting it into words. What feels hardest about it right now?",
-    'I hear you. Let’s take this one small piece at a time. What’s one thing that would feel even a tiny bit lighter?',
-  ];
-  return followUps[(turn - 1) % followUps.length];
-}
+/** Shown when inference fails — never fabricate a reply. */
+const AI_UNAVAILABLE =
+  '⚠️ I couldn’t reach the AI just now. Take a breath — and try again in a moment.';
 
 const GROUND_STEPS = [
   { n: 5, sense: 'see', prompt: 'Name 5 things you can see around you.', hint: 'Look slowly. Colours, shapes, light — anything counts.' },
@@ -510,11 +500,12 @@ function TalkView({
 
       // Small processing beat so the reply feels heard, not instant.
       await new Promise((r) => window.setTimeout(r, 500));
-      const finalReply = reply ?? localComfortReply(turn);
+      const finalReply = reply ?? AI_UNAVAILABLE;
       setTurn((t) => t + 1);
-      setMessages((m) => [...m, { id: nextId(), role: 'sage', text: finalReply as string }]);
+      setMessages((m) => [...m, { id: nextId(), role: 'sage', text: finalReply }]);
       onExpressionChange('calm');
-      speakIfOn(finalReply as string);
+      // Never speak an error notice as if Sage said it.
+      if (reply) speakIfOn(finalReply);
       setBusy(false);
       busyRef.current = false;
     },
@@ -540,7 +531,7 @@ function TalkView({
     <div style={{ display: 'flex', flexDirection: 'column', gap: 6, minHeight: 0, flex: '1 1 auto' }}>
       {!aiAvailable && (
         <p style={{ ...smallText, opacity: 0.75 }}>
-          Offline comfort mode · conversational AI unavailable · your words stay on this device.
+          AI unavailable · Sage couldn’t reach Nemotron — try again in a moment.
         </p>
       )}
       <div
