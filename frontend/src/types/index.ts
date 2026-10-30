@@ -94,3 +94,47 @@ export const ACTIVITY_THEMES: ActivityTheme[] = [
   { id: 'workout', name: 'Workout', description: 'Sporty headband and weights' },
   { id: 'self-care', name: 'Self-Care', description: 'Face mask and cucumber slices' },
 ];
+
+export interface TaskStep {
+  id: string;
+  title: string;
+  description: string;
+  status: 'pending' | 'in_progress' | 'completed' | 'blocked' | 'skipped';
+  tier: string;
+  result?: string | null;
+  error?: string | null;
+  executed_at?: string | null;
+}
+
+export interface Task {
+  id: string;
+  goal: string;
+  status: 'planning' | 'executing' | 'completed' | 'failed' | 'paused';
+  steps: TaskStep[];
+  current_step_index: number;
+  created_at: string;
+  updated_at: string;
+  error?: string | null;
+  progress: { completed: number; total: number; percent: number };
+}
+
+export interface CreateTaskRequest {
+  goal: string;
+}
+
+export interface CreateTaskResponse {
+  task: Task;
+}
+
+export interface ExecuteTaskRequest {
+  task_id: string;
+  all?: boolean;
+}
+
+export interface ExecuteTaskResponse {
+  task: Task;
+}
+
+export interface TaskListResponse {
+  tasks: Task[];
+}

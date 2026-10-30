@@ -2,6 +2,7 @@ import { useCallback } from 'react';
 import type { SageMode } from './types';
 import { MainScreen } from './components/layout';
 import { useAgentState } from './hooks';
+import { TaskPanel } from './components/TaskPanel';
 import './App.css';
 
 function App() {
@@ -18,12 +19,15 @@ function App() {
   }, []);
 
   return (
-    <MainScreen
-      currentMode={state.mode}
-      onModeChange={handleModeChange}
-      onSendMessage={handleSendMessage}
-      isConnected={isConnected}
-    />
+    <>
+      <MainScreen
+        currentMode={state.mode}
+        onModeChange={handleModeChange}
+        onSendMessage={handleSendMessage}
+        isConnected={isConnected}
+      />
+      <TaskPanel />
+    </>
   );
 }
 

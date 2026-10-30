@@ -1,9 +1,10 @@
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import JSONResponse
-from app.models.schemas import HealthResponse, AgentStateRequest, AgentStateResponse, ChatRequest, ChatResponse, ModeSuggestionRequest, ModeSuggestionResponse
+from app.models.schemas import (HealthResponse, AgentStateRequest, AgentStateResponse, ChatRequest, ChatResponse, ModeSuggestionRequest, ModeSuggestionResponse, CreateTaskRequest, CreateTaskResponse, ExecuteTaskRequest, ExecuteTaskResponse, TaskListResponse, TaskSchema)
 from app.services.agent import agent_service
 from app.services.nemotron import nemotron_service
 from app.services import usage_ledger
+from app.services.task_agent import task_agent
 
 router = APIRouter()
 
@@ -87,3 +88,68 @@ async def mode_suggestion(request: ModeSuggestionRequest):
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"AI error: {str(e)}")
+
+
+@router.post("/api/tasks", response_model=CreateTaskResponse)
+async def create_task(request: CreateTaskRequest):
+    """Create and plan a new autonomous task. Planning uses Nemotron 3 Ultra."""
+    if not nemotron_service.is_available():
+        raise HTTPException(
+            status_code=503,
+            detail="AI companion unavailable: NEBIUS_API_KEY not configured. Set it in your .env file."
+        )
+    task = await task_agent.create_task(request.goal)
+    return CreateTaskResponse(task=TaskSchema(**task.to_dict()))
+
+
+@router.get("/api/tasks", response_model=TaskListResponse)
+async def list_tasks():
+    """List all tasks, newest first."""
+    tasks = task_agent.list_tasks()
+    return TaskListResponse(tasks=[TaskSchema(**t.to_dict()) for t in tasks])
+
+
+@router.get("/api/tasks/{task_id}", response_model=TaskSchema)
+async def get_task(task_id: str):
+    task = task_agent.get_task(task_id)
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+    return TaskSchema(**task.to_dict())
+
+
+@router.post("/api/tasks/{task_id}/execute", response_model=ExecuteTaskResponse)
+async def execute_task(task_id: str, request: ExecuteTaskRequest):
+    """Execute the next step, or all remaining steps if request.all is True."""
+    task = task_agent.get_task(task_id)
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+    if request.all:
+        updated = await task_agent.execute_all(task_id)
+    else:
+        updated = await task_agent.execute_next_step(task_id)
+    if not updated:
+        raise HTTPException(status_code=404, detail="Task not found")
+    return ExecuteTaskResponse(task=TaskSchema(**updated.to_dict()))
+
+
+@router.post("/api/tasks/{task_id}/pause", response_model=TaskSchema)
+async def pause_task(task_id: str):
+    task = await task_agent.pause_task(task_id)
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+    return TaskSchema(**task.to_dict())
+
+
+@router.post("/api/tasks/{task_id}/resume", response_model=TaskSchema)
+async def resume_task(task_id: str):
+    task = await task_agent.resume_task(task_id)
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+    return TaskSchema(**task.to_dict())
+
+
+@router.delete("/api/tasks/{task_id}")
+async def delete_task(task_id: str):
+    if not task_agent.delete_task(task_id):
+        raise HTTPException(status_code=404, detail="Task not found")
+    return {"status": "deleted"}

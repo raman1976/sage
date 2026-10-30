@@ -90,6 +90,63 @@ class ApiService {
     const valid = ['calm', 'focus', 'companion', 'plan'];
     return { mode: data.mode && valid.includes(data.mode) ? data.mode : null };
   }
+
+  /* ---------------- Autonomous tasks ---------------- */
+
+  async createTask(goal: string): Promise<{ task: any }> {
+    const response = await fetch(`${this.baseUrl}/api/tasks`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ goal }),
+    });
+    if (!response.ok) throw new Error('Failed to create task');
+    return response.json();
+  }
+
+  async listTasks(): Promise<{ tasks: any[] }> {
+    const response = await fetch(`${this.baseUrl}/api/tasks`);
+    if (!response.ok) throw new Error('Failed to list tasks');
+    return response.json();
+  }
+
+  async getTask(taskId: string): Promise<any> {
+    const response = await fetch(`${this.baseUrl}/api/tasks/${taskId}`);
+    if (!response.ok) throw new Error('Failed to get task');
+    return response.json();
+  }
+
+  async executeTask(taskId: string, all = false): Promise<any> {
+    const response = await fetch(`${this.baseUrl}/api/tasks/${taskId}/execute`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ task_id: taskId, all }),
+    });
+    if (!response.ok) throw new Error('Failed to execute task');
+    return response.json();
+  }
+
+  async pauseTask(taskId: string): Promise<any> {
+    const response = await fetch(`${this.baseUrl}/api/tasks/${taskId}/pause`, {
+      method: 'POST',
+    });
+    if (!response.ok) throw new Error('Failed to pause task');
+    return response.json();
+  }
+
+  async resumeTask(taskId: string): Promise<any> {
+    const response = await fetch(`${this.baseUrl}/api/tasks/${taskId}/resume`, {
+      method: 'POST',
+    });
+    if (!response.ok) throw new Error('Failed to resume task');
+    return response.json();
+  }
+
+  async deleteTask(taskId: string): Promise<void> {
+    const response = await fetch(`${this.baseUrl}/api/tasks/${taskId}`, {
+      method: 'DELETE',
+    });
+    if (!response.ok) throw new Error('Failed to delete task');
+  }
 }
 
 export const api = new ApiService();
