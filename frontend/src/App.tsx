@@ -2,15 +2,12 @@ import { useCallback } from 'react';
 import type { SageMode } from './types';
 import { MainScreen } from './components/layout';
 import { useAgentState } from './hooks';
-import { TaskPanel } from './components/TaskPanel';
 import './App.css';
 
 function App() {
   const { state, isConnected, setMode } = useAgentState(3000);
 
   const handleModeChange = useCallback((mode: SageMode) => {
-    // Backend sync is best-effort; the UI switches mode locally regardless
-    // so features like Calm Mode work fully offline.
     setMode(mode).catch(() => {});
   }, [setMode]);
 
@@ -19,15 +16,12 @@ function App() {
   }, []);
 
   return (
-    <>
-      <MainScreen
-        currentMode={state.mode}
-        onModeChange={handleModeChange}
-        onSendMessage={handleSendMessage}
-        isConnected={isConnected}
-      />
-      <TaskPanel />
-    </>
+    <MainScreen
+      currentMode={state.mode}
+      onModeChange={handleModeChange}
+      onSendMessage={handleSendMessage}
+      isConnected={isConnected}
+    />
   );
 }
 
