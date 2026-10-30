@@ -50,6 +50,7 @@ Open `http://localhost:5173`.
 - URL: `https://sage-1m64.onrender.com`
 - Note: free tier sleeps after 15 min idle (first request wakes it)
 
+Important - You can run using the live link!
 ### Frontend (Vercel)
 - Connected to GitHub repo `raman1976/sage`
 - Root directory: `frontend`
