@@ -7,14 +7,14 @@ ENV PYTHONUNBUFFERED=1
 
 RUN pip install --no-cache-dir --upgrade pip
 
+# Install Python dependencies
 COPY backend/requirements.txt .
-RUN pip install --no-cache-dir -r backend/requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
 
-# Backend app + shared agent package at repo root
-COPY backend/app /app/app
-COPY agent /app/agent
+# Copy backend app and shared agent package
+COPY backend/app ./app
+COPY agent ./agent
 
-# NEBIUS_API_KEY must be supplied at runtime via -e NEBIUS_API_KEY=...
 EXPOSE 8000
 
 CMD ["python", "-m", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
