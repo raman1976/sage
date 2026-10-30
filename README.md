@@ -2,6 +2,8 @@
 
 Sage is a conversational AI companion for people with ADHD. It combines a friendly chat interface with an autonomous task agent that plans and executes goals using Nemotron models on Nebius Token Factory.
 
+Live link to try it out: https://sage-adhd-robot.vercel.app/
+
 ## What it is
 - Chat companion with four modes: **Focus, Calm, Companion, Plan**
 - Autonomous **Task Agent**: enter a goal, Sage plans steps with **Nemotron 3 Ultra** (serious reasoning), then executes step-by-step with **Nano** (simple) and **Super** (complex) to stretch credits
